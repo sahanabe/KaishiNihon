@@ -2,6 +2,7 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://sahanabe.github.io/KaishiNihon",
   "dependencies": {
     "@tanstack/react-query": "^5.81.5",
     "@testing-library/dom": "^10.4.0",
