@@ -45,6 +45,8 @@ jobs:
           ls -la build/
           echo "CSS files:"
           find build/ -name "*.css" -type f
+          echo "Content of main CSS file:"
+          find build/ -name "*.css" -type f -exec head -20 {} \;
           
       - name: Setup Pages
         uses: actions/configure-pages@v4

@@ -1,0 +1,13 @@
+/* Test CSS file to verify CSS processing */
+.test-css {
+  background-color: red;
+  color: white;
+  padding: 20px;
+  margin: 10px;
+  border-radius: 5px;
+}
+
+/* Ensure Tailwind is working */
+.tailwind-test {
+  @apply bg-blue-500 text-white p-4 rounded-lg;
+} 

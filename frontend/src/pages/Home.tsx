@@ -7,6 +7,7 @@ import {
   Flame, Gem, Crown, Wand2, Sword, Atom, Dna, Infinity, User
 } from 'lucide-react';
 import AuthModal from '../components/AuthModal';
+import TestCSS from '../components/TestCSS';
 
 const Home: React.FC = () => {
   const [typedText, setTypedText] = useState('');
@@ -117,6 +118,9 @@ const Home: React.FC = () => {
 
   return (
     <>
+      {/* CSS Test Component */}
+      <TestCSS />
+      
       {/* Original Dark Theme Background */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
