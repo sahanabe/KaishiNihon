@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import AuthModal from '../components/AuthModal';
 import TestCSS from '../components/TestCSS';
+import CSSDebug from '../components/CSSDebug';
 
 const Home: React.FC = () => {
   const [typedText, setTypedText] = useState('');
@@ -118,6 +119,9 @@ const Home: React.FC = () => {
 
   return (
     <>
+      {/* CSS Debug Component */}
+      <CSSDebug />
+      
       {/* CSS Test Component */}
       <TestCSS />
       
