@@ -1,0 +1,45 @@
+/* CSS Debug Styles */
+.css-debug-container {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 9999;
+  background: #333;
+  padding: 20px;
+  border-radius: 8px;
+  border: 2px solid #fff;
+  max-width: 300px;
+}
+
+.css-debug-container h2 {
+  color: #fff;
+  margin: 0 0 15px 0;
+  font-size: 18px;
+}
+
+.css-test-box {
+  background-color: red !important;
+  color: white !important;
+  padding: 15px !important;
+  margin: 10px 0 !important;
+  border-radius: 5px !important;
+  font-weight: bold !important;
+}
+
+.tailwind-test-box {
+  background-color: blue !important;
+  color: white !important;
+  padding: 15px !important;
+  margin: 10px 0 !important;
+  border-radius: 5px !important;
+  font-weight: bold !important;
+}
+
+.custom-test-box {
+  background-color: green !important;
+  color: white !important;
+  padding: 15px !important;
+  margin: 10px 0 !important;
+  border-radius: 5px !important;
+  font-weight: bold !important;
+} 
