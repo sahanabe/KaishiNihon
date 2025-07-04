@@ -7,8 +7,6 @@ import {
   Flame, Gem, Crown, Wand2, Sword, Atom, Dna, Infinity, User
 } from 'lucide-react';
 import AuthModal from '../components/AuthModal';
-import TestCSS from '../components/TestCSS';
-import CSSDebug from '../components/CSSDebug';
 
 const Home: React.FC = () => {
   const [typedText, setTypedText] = useState('');
@@ -119,11 +117,7 @@ const Home: React.FC = () => {
 
   return (
     <>
-      {/* CSS Debug Component */}
-      <CSSDebug />
       
-      {/* CSS Test Component */}
-      <TestCSS />
       
       {/* Original Dark Theme Background */}
       <div className="fixed inset-0 z-0">
