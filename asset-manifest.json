@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/KaishiNihon/static/css/main.d89a2818.css",
+    "main.js": "/KaishiNihon/static/js/main.61dae239.js",
+    "static/js/453.670e15c7.chunk.js": "/KaishiNihon/static/js/453.670e15c7.chunk.js",
+    "static/media/logo.png": "/KaishiNihon/static/media/logo.9b97b211e6ed7776f903.png",
+    "index.html": "/KaishiNihon/index.html",
+    "main.d89a2818.css.map": "/KaishiNihon/static/css/main.d89a2818.css.map",
+    "main.61dae239.js.map": "/KaishiNihon/static/js/main.61dae239.js.map",
+    "453.670e15c7.chunk.js.map": "/KaishiNihon/static/js/453.670e15c7.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.d89a2818.css",
+    "static/js/main.61dae239.js"
+  ]
+}
