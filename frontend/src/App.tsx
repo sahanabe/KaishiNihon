@@ -30,6 +30,7 @@ import MinnaNoNihongoLessons from './pages/MinnaNoNihongoLessons';
 import OnlineClass from './pages/OnlineClass';
 import ComprehensiveTestingN5 from './pages/ComprehensiveTestingN5';
 import AIInterviewPreparation from './pages/AIInterviewPreparation';
+import KanjiMasteryN4 from './pages/KanjiMasteryN4';
 
 import './App.css';
 
@@ -69,6 +70,7 @@ function App() {
                 <Route path="/language/minna-no-nihongo" element={<MinnaNoNihongoLessons />} />
                 <Route path="/language/comprehensive-testing-n5" element={<ComprehensiveTestingN5 />} />
                 <Route path="/language/ai-interview-preparation" element={<AIInterviewPreparation />} />
+                <Route path="/language/jlpt-n4/kanji-mastery" element={<KanjiMasteryN4 />} />
                 <Route path="/visa" element={<Visa />} />
                 <Route path="/services" element={<Services />} />
                 <Route path="/consultation" element={<Consultation />} />

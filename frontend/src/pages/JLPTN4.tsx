@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import VocabularyBuilder from '../components/VocabularyBuilder';
 import { 
   BookOpen, 
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 const JLPTN4: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [showVocabularyBuilder, setShowVocabularyBuilder] = useState(false);
   const [userProgress] = useState({
@@ -447,8 +448,24 @@ const JLPTN4: React.FC = () => {
                       {/* Action Button */}
                       <div className="mt-6">
                         {step.id === 1 ? (
-                          <button className={`bg-gradient-to-r ${step.color} text-white px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform flex items-center space-x-2`}>
-                            <span>Start Step {step.id}</span>
+                          <button 
+                            id="kanji-mastery-button"
+                            onClick={() => {
+                              console.log('Kanji Mastery button clicked! Navigating...');
+                              console.log('Current pathname:', window.location.pathname);
+                              console.log('Navigating to:', '/language/jlpt-n4/kanji-mastery');
+                              try {
+                                navigate('/language/jlpt-n4/kanji-mastery');
+                                console.log('Navigation called');
+                              } catch (error) {
+                                console.error('Navigation error:', error);
+                                // Fallback to direct URL change
+                                window.location.href = '/#/language/jlpt-n4/kanji-mastery';
+                              }
+                            }}
+                            className={`bg-gradient-to-r ${step.color} text-white px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform flex items-center space-x-2`}
+                          >
+                            <span>🚀 Start Advanced Kanji Mastery</span>
                             <ChevronRight className="w-4 h-4" />
                           </button>
                         ) : (
