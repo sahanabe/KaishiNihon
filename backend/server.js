@@ -4,10 +4,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-// const connectDB = require('./config/database'); // Commented out for simple auth
+const connectDB = require('./config/database');
 
 // Import route modules
-const authRoutes = require('./routes/auth-simple'); // Using simple auth without MongoDB
+const authRoutes = require('./routes/auth'); // Using MongoDB-based auth
 const visaRoutes = require('./routes/visa');
 const languageRoutes = require('./routes/language');
 const servicesRoutes = require('./routes/services');
@@ -16,8 +16,8 @@ const consultationRoutes = require('./routes/consultation');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to MongoDB - commented out for simple auth testing
-// connectDB();
+// Connect to MongoDB
+connectDB();
 
 // Security middleware
 app.use(helmet());

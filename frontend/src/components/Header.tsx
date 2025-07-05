@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  Menu, X, User, LogOut,
+  Menu, X, LogOut,
   Brain, Sparkles, Search, ChevronDown,
   Settings, LayoutDashboard, UserCircle, Star, Crown, Globe
 } from 'lucide-react';
@@ -12,7 +12,6 @@ import AuthModal from './AuthModal';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   
@@ -169,7 +168,6 @@ const Header: React.FC = () => {
   const handleLogout = () => {
     logout();
     localStorage.removeItem('completedProfile');
-    setIsUserMenuOpen(false);
     navigate('/');
   };
 
@@ -276,6 +274,12 @@ const Header: React.FC = () => {
     navigate(href);
     setShowSearchResults(false);
     setSearchQuery('');
+  };
+
+  // Handle mega menu item click to close menu
+  const handleMegaMenuItemClick = () => {
+    setActiveMegaMenu(null);
+    setIsClickModeActive(false);
   };
 
   const navigationItems = [
@@ -664,6 +668,7 @@ const Header: React.FC = () => {
                             <li key={subIndex}>
                               <Link
                                 to={subItem.href}
+                                onClick={handleMegaMenuItemClick}
                                 className={`group block p-3 rounded-lg transition-all duration-200 ${
                                   'special' in subItem && subItem.special 
                                     ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white shadow-lg' 
@@ -736,6 +741,7 @@ const Header: React.FC = () => {
                           </div>
                           <Link
                             to={megaMenus[activeMegaMenu as keyof typeof megaMenus].featured.href}
+                            onClick={handleMegaMenuItemClick}
                             className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors shadow-sm hover:shadow-md"
                           >
                             {megaMenus[activeMegaMenu as keyof typeof megaMenus].featured.cta}
@@ -745,6 +751,7 @@ const Header: React.FC = () => {
                           <div className="pt-3 border-t border-purple-200">
                             <Link
                               to="/language/meet-lecturers"
+                              onClick={handleMegaMenuItemClick}
                               className="text-purple-600 hover:text-purple-800 text-sm font-medium flex items-center justify-center space-x-1 group"
                             >
                               <span>Meet Your Lecturers</span>

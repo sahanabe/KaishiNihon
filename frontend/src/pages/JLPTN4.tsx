@@ -51,7 +51,7 @@ const JLPTN4: React.FC = () => {
     {
       id: 2,
       title: 'N4 Vocabulary Expansion',
-      description: '1,500 intermediate words, 15 words per day',
+      description: '700 intermediate words, 15 words per day',
       duration: '100 days',
       icon: <Brain className="w-6 h-6" />,
       color: 'from-green-500 to-green-600',
@@ -59,12 +59,12 @@ const JLPTN4: React.FC = () => {
     },
     {
       id: 3,
-      title: 'Intermediate Grammar Structures',
-      description: 'Complex sentence patterns and conditionals',
+      title: 'Minna no Nihongo Lesson 26 to 50 Grammar Structures',
+      description: 'Essential grammar patterns from Minna no Nihongo textbook',
       duration: '6-8 weeks',
       icon: <Target className="w-6 h-6" />,
       color: 'from-purple-500 to-purple-600',
-      details: ['Conditional forms (ば、と、たら)', 'Passive and causative', 'Honorific and humble forms', 'Complex modifying clauses']
+      details: ['Lesson 26-30: Basic conditionals and expressions', 'Lesson 31-35: Passive and causative forms', 'Lesson 36-40: Honorific and humble language', 'Lesson 41-50: Complex sentence structures']
     },
     {
       id: 4,
@@ -466,6 +466,30 @@ const JLPTN4: React.FC = () => {
                             className={`bg-gradient-to-r ${step.color} text-white px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform flex items-center space-x-2`}
                           >
                             <span>🚀 Start Advanced Kanji Mastery</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        ) : step.id === 2 ? (
+                          <button 
+                            onClick={() => navigate('/language/jlpt-n4/vocabulary-expansion')}
+                            className={`bg-gradient-to-r ${step.color} text-white px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform flex items-center space-x-2`}
+                          >
+                            <span>Start N4 Vocabulary Expansion</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        ) : step.id === 3 ? (
+                          <button 
+                            onClick={() => navigate('/language/minna-no-nihongo')}
+                            className={`bg-gradient-to-r ${step.color} text-white px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform flex items-center space-x-2`}
+                          >
+                            <span>Start Minna no Nihongo Lessons</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        ) : step.id === 4 ? (
+                          <button 
+                            onClick={() => navigate('/language/jlpt-n4/reading-comprehension')}
+                            className={`bg-gradient-to-r ${step.color} text-white px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform flex items-center space-x-2`}
+                          >
+                            <span>Start Reading Comprehension</span>
                             <ChevronRight className="w-4 h-4" />
                           </button>
                         ) : (

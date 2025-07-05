@@ -333,9 +333,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 're
                       type="text"
                       value={registerData.firstName}
                       onChange={(e) => setRegisterData({ ...registerData, firstName: e.target.value })}
-                      className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 auth-input-visible"
                       placeholder="First name"
                       required
+                      style={{ 
+                        color: '#000000', 
+                        backgroundColor: '#ffffff',
+                        opacity: 1,
+                        WebkitTextFillColor: '#000000',
+                        border: '2px solid #000000'
+                      }}
                     />
                   </div>
                 </div>
@@ -351,9 +358,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 're
                       type="text"
                       value={registerData.lastName}
                       onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
-                      className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 auth-input-visible"
                       placeholder="Last name"
                       required
+                      style={{ 
+                        color: '#000000', 
+                        backgroundColor: '#ffffff',
+                        opacity: 1,
+                        WebkitTextFillColor: '#000000',
+                        border: '2px solid #000000'
+                      }}
                     />
                   </div>
                 </div>
@@ -371,7 +385,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 're
                     type="email"
                     value={registerData.email}
                     onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                    className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 auth-input-visible"
                     placeholder="Enter your email"
                     required
                   />
@@ -390,7 +404,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 're
                     type="email"
                     value={registerData.confirmEmail}
                     onChange={(e) => setRegisterData({ ...registerData, confirmEmail: e.target.value })}
-                    className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 auth-input-visible"
                     placeholder="Confirm your email"
                     required
                   />
@@ -411,7 +425,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 're
                       type={showPassword ? 'text' : 'password'}
                       value={registerData.password}
                       onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                      className="block w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="block w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 auth-input-visible"
                       placeholder="Create password"
                       required
                     />
@@ -436,7 +450,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 're
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={registerData.confirmPassword}
                       onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                      className="block w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="block w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 auth-input-visible"
                       placeholder="Confirm password"
                       required
                     />
@@ -460,9 +474,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 're
                 />
                 <label htmlFor="terms" className="ml-2 block text-xs text-gray-700">
                   I agree to the{' '}
-                  <a href="#" className="text-purple-600 hover:text-purple-700">Terms of Service</a>
+                  <button type="button" className="text-purple-600 hover:text-purple-700 underline">Terms of Service</button>
                   {' '}and{' '}
-                  <a href="#" className="text-purple-600 hover:text-purple-700">Privacy Policy</a>
+                  <button type="button" className="text-purple-600 hover:text-purple-700 underline">Privacy Policy</button>
                 </label>
               </div>
 
@@ -497,7 +511,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 're
                     type="email"
                     value={loginData.email}
                     onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 auth-input-visible"
                     placeholder="Enter your email"
                     required
                   />
@@ -516,7 +530,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 're
                     type={showPassword ? 'text' : 'password'}
                     value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    className="block w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="block w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 auth-input-visible"
                     placeholder="Enter your password"
                     required
                   />
@@ -541,9 +555,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 're
                     Remember me
                   </label>
                 </div>
-                <a href="#" className="text-xs text-purple-600 hover:text-purple-700">
+                <button type="button" className="text-xs text-purple-600 hover:text-purple-700">
                   Forgot password?
-                </a>
+                </button>
               </div>
 
               <button

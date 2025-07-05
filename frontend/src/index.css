@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&family=Noto+Serif+JP:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -19,7 +19,83 @@
   }
   
   .japanese-text {
-    font-family: 'Noto Sans JP', sans-serif;
+    font-family: 'Noto Sans JP', 'Noto Serif JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+  
+  .japanese-character {
+    font-family: 'Noto Serif JP', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', serif;
+    font-weight: 500;
+    font-size: 1.2em;
+    line-height: 1.2;
+  }
+  
+  .japanese-table {
+    font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+  }
+  
+  .japanese-table td {
+    font-family: 'Noto Serif JP', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', serif;
+    font-weight: 600;
+    font-size: 1.5em;
+    color: #000000 !important;
+    text-shadow: none !important;
+  }
+  
+  /* Force Japanese character visibility */
+  .japanese-character {
+    font-family: 'Noto Serif JP', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'MS Gothic', 'MS Mincho', serif !important;
+    font-weight: 600 !important;
+    font-size: 1.8em !important;
+    line-height: 1.2 !important;
+    color: #000000 !important;
+    text-shadow: none !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    display: block !important;
+    text-align: center !important;
+  }
+  
+  /* Additional aggressive styling for Japanese characters */
+  .japanese-character,
+  td.japanese-character,
+  .japanese-character * {
+    color: #000000 !important;
+    background-color: transparent !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    font-family: 'Noto Serif JP', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'MS Gothic', 'MS Mincho', serif !important;
+    font-weight: 600 !important;
+    font-size: 1.8em !important;
+    text-shadow: none !important;
+    -webkit-text-fill-color: #000000 !important;
+    -webkit-opacity: 1 !important;
+  }
+  
+  /* Additional fallback for table cells */
+  table td {
+    font-family: 'Noto Serif JP', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'MS Gothic', 'MS Mincho', serif !important;
+    color: #000000 !important;
+  }
+  
+  /* Force all Japanese characters in tables to be visible */
+  table td {
+    color: #000000 !important;
+    background-color: transparent !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    font-family: 'Noto Serif JP', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'MS Gothic', 'MS Mincho', serif !important;
+    font-weight: 600 !important;
+    font-size: 1.8em !important;
+    text-shadow: none !important;
+    -webkit-text-fill-color: #000000 !important;
+    -webkit-opacity: 1 !important;
+  }
+  
+  /* Force all Japanese text to be visible */
+  * {
+    font-family: 'Noto Sans JP', 'Noto Serif JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'MS Gothic', 'MS Mincho', sans-serif;
   }
 }
 
@@ -29,15 +105,15 @@
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-md hover:shadow-lg transform hover:-translate-y-0.5;
+    @apply bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500 shadow-md hover:shadow-lg transform hover:-translate-y-0.5;
   }
   
   .btn-secondary {
-    @apply bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500;
+    @apply bg-pink-600 text-white hover:bg-pink-700 focus:ring-pink-500;
   }
   
   .btn-outline {
-    @apply border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-primary-500 shadow-sm hover:shadow-md;
+    @apply border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-purple-500 shadow-sm hover:shadow-md;
   }
   
   .card {
@@ -45,7 +121,7 @@
   }
   
   .input-field {
-    @apply appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors duration-200;
+    @apply appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm transition-colors duration-200;
   }
   
   .page-container {
@@ -57,7 +133,7 @@
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent;
   }
   
   .japan-flag-gradient {
@@ -142,3 +218,67 @@
 .animate-bounce-slow {
   animation: bounce-slow 2s infinite;
 }
+
+/* Blob animation for background */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Force visible text in auth modal inputs - ULTIMATE FIX */
+.auth-input-visible {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #000000 !important;
+  -webkit-opacity: 1 !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  border: 2px solid #000000 !important;
+}
+
+.auth-input-visible::placeholder {
+  color: #6b7280 !important;
+  opacity: 0.7 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+}
+
+/* Even more aggressive overrides for any input in auth modal */
+input.auth-input-visible,
+input.auth-input-visible:focus,
+input.auth-input-visible:active,
+input.auth-input-visible:hover,
+input.auth-input-visible:visited {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #000000 !important;
+  -webkit-opacity: 1 !important;
+  text-shadow: none !important;
+  font-weight: 500 !important;
+  border: 2px solid #000000 !important;
+}
+
+

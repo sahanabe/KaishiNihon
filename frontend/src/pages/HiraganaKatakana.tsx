@@ -20,6 +20,7 @@ import {
 import MemoryCardGame from '../components/MemoryCardGame';
 import SpeedRecognitionGame from '../components/SpeedRecognitionGame';
 import StrokePuzzle from '../components/StrokePuzzle';
+import JapaneseTest from '../components/JapaneseTest';
 
 const HiraganaKatakana: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -38,260 +39,360 @@ const HiraganaKatakana: React.FC = () => {
   const [feedbackType, setFeedbackType] = useState<'positive' | 'negative' | 'neutral'>('neutral');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Stroke Order Practice State
+  const [strokeOrderMode, setStrokeOrderMode] = useState<'learn' | 'practice'>('learn');
+  const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0);
+  const [userStrokes, setUserStrokes] = useState<Array<Array<[number, number]>>>([]);
+  const [drawingPath, setDrawingPath] = useState<Array<[number, number]>>([]);
+  const [strokeOrderScore, setStrokeOrderScore] = useState(0);
+  const [showStrokeGuide, setShowStrokeGuide] = useState(true);
+  const [practiceMode, setPracticeMode] = useState<'free' | 'guided' | 'challenge'>('guided');
+
+  // Reset stroke order practice when character changes
+  useEffect(() => {
+    if (activeTab === 'stroke-order') {
+      resetStrokeOrderPractice();
+    }
+  }, [currentCharacterIndex, currentScript]);
+
   // Complete Hiragana characters with stroke order and mnemonics  
-  const hiraganaCharacters = [
+  const hiraganaCharacters: Array<{
+    char: string;
+    romaji: string;
+    sound: string;
+    mnemonic: string;
+    strokes: number;
+    group: string;
+    strokePaths?: number[][][];
+  }> = [
+    // Basic Hiragana (Gojuon Table – あ～ん)
     // Vowels (あいうえお)
-    { 
-      char: 'あ', romaji: 'a', sound: '/a/', mnemonic: 'A woman with Arms open wide', strokes: 3, group: 'vowels',
-      strokePaths: [
-        // First stroke: horizontal line across top
-        [[80, 60], [100, 58], [120, 56], [140, 55], [160, 56], [180, 58], [200, 60], [220, 62]],
-        // Second stroke: vertical line on left side
-        [[110, 40], [108, 60], [106, 80], [104, 100], [102, 120], [100, 140], [98, 160], [96, 180], [94, 200], [96, 220], [98, 240]],
-        // Third stroke: large curved stroke forming right part
-        [[190, 80], [195, 90], [200, 105], [205, 120], [210, 135], [215, 150], [220, 165], [225, 180], [228, 195], [230, 210], [228, 225], [225, 240], [220, 252], [210, 262], [195, 270], [180, 275], [165, 278], [150, 278], [135, 275], [122, 270], [112, 262], [105, 252], [100, 240], [98, 225], [100, 210], [105, 198], [115, 188], [130, 180], [150, 175], [170, 172], [190, 175], [205, 180], [215, 188], [220, 198]]
-      ]
-    },
-    { 
-      char: 'い', romaji: 'i', sound: '/i/', mnemonic: 'Two sticks like roman numeral II', strokes: 2, group: 'vowels',
-      strokePaths: [
-        // First stroke: left vertical line
-        [[100, 50], [98, 70], [96, 90], [94, 110], [92, 130], [90, 150], [88, 170], [86, 190], [84, 210], [86, 230], [88, 250]],
-        // Second stroke: right vertical with hook
-        [[200, 65], [198, 85], [196, 105], [194, 125], [192, 145], [190, 165], [188, 185], [186, 205], [184, 225], [180, 245], [175, 260], [165, 270], [150, 275], [130, 278]]
-      ]
-    },
-    { 
-      char: 'う', romaji: 'u', sound: '/u/', mnemonic: 'A smiling face with a Unibrow', strokes: 2, group: 'vowels',
-      strokePaths: [
-        // First stroke: horizontal line with slight curve
-        [[70, 110], [90, 108], [110, 106], [130, 105], [150, 104], [170, 105], [190, 106], [210, 108], [230, 110]],
-        // Second stroke: bottom curved stroke resembling う shape
-        [[80, 160], [100, 170], [120, 180], [140, 188], [160, 195], [180, 200], [200, 203], [220, 205], [240, 203], [255, 198], [265, 190], [270, 180], [272, 168], [270, 155], [265, 143], [255, 133], [240, 125], [220, 120], [200, 118], [180, 120], [160, 125], [142, 133], [128, 143], [118, 155], [112, 168], [110, 180], [112, 193], [118, 205], [128, 215], [142, 222], [160, 227], [180, 230], [200, 230]]
-      ]
-    },
-    { 
-      char: 'え', romaji: 'e', sound: '/e/', mnemonic: 'An Exotic bird with a long neck', strokes: 2, group: 'vowels',
-      strokePaths: [
-        // First stroke: top horizontal line
-        [[70, 90], [90, 88], [110, 86], [130, 85], [150, 86], [170, 88], [190, 90]],
-        // Second stroke: bottom curved line with extensions
-        [[60, 160], [80, 158], [100, 156], [120, 155], [140, 156], [160, 158], [180, 160], [200, 163], [218, 168], [233, 175], [245, 185], [250, 195], [248, 205], [240, 213], [225, 218], [205, 220], [180, 218], [155, 213], [135, 205], [120, 195], [110, 183], [105, 170]]
-      ]
-    },
-    { 
-      char: 'お', romaji: 'o', sound: '/o/', mnemonic: 'UFO with Orbit lines around it', strokes: 3, group: 'vowels',
-      strokePaths: [
-        // First stroke: left vertical line
-        [[80, 50], [78, 70], [76, 90], [74, 110], [72, 130], [70, 150], [68, 170], [66, 190], [64, 210], [66, 230], [68, 250]],
-        // Second stroke: top horizontal line
-        [[110, 85], [130, 83], [150, 82], [170, 83], [190, 85]],
-        // Third stroke: bottom horizontal with right extension
-        [[110, 170], [130, 168], [150, 167], [170, 168], [190, 170], [210, 173], [228, 178], [243, 185], [253, 195], [258, 205], [260, 218], [258, 230], [253, 240], [243, 248], [228, 253], [210, 255], [190, 253], [170, 250], [153, 245], [138, 238], [126, 228], [118, 215], [115, 200], [118, 188], [126, 178], [138, 170]]
-      ]
-    },
+    { char: 'あ', romaji: 'a', sound: '/a/', mnemonic: 'A woman with Arms open wide', strokes: 3, group: 'vowels' },
+    { char: 'い', romaji: 'i', sound: '/i/', mnemonic: 'Two sticks like roman numeral II', strokes: 2, group: 'vowels' },
+    { char: 'う', romaji: 'u', sound: '/u/', mnemonic: 'A smiling face with a Unibrow', strokes: 2, group: 'vowels' },
+    { char: 'え', romaji: 'e', sound: '/e/', mnemonic: 'An Exotic bird with a long neck', strokes: 2, group: 'vowels' },
+    { char: 'お', romaji: 'o', sound: '/o/', mnemonic: 'UFO with Orbit lines around it', strokes: 3, group: 'vowels' },
+    
     // K-sounds (かきくけこ)
-    { 
-      char: 'か', romaji: 'ka', sound: '/ka/', mnemonic: 'A Karate chop breaking a stick', strokes: 3, group: 'k-sounds',
-      strokePaths: [
-        // First stroke: horizontal line
-        [[80, 80], [100, 78], [120, 76], [140, 75], [160, 76], [180, 78], [200, 80]],
-        // Second stroke: vertical line
-        [[110, 60], [108, 80], [106, 100], [104, 120], [102, 140], [100, 160], [98, 180], [96, 200], [98, 220]],
-        // Third stroke: right curved stroke
-        [[170, 100], [175, 110], [180, 125], [185, 140], [190, 155], [195, 170], [200, 185], [202, 200], [200, 215], [195, 228], [185, 238], [170, 245], [150, 248], [130, 245], [115, 238], [105, 228], [100, 215]]
-      ]
-    },
-    { 
-      char: 'き', romaji: 'ki', sound: '/ki/', mnemonic: 'A Key with teeth pointing up', strokes: 4, group: 'k-sounds',
-      strokePaths: [
-        // First stroke: horizontal top line
-        [[70, 70], [90, 68], [110, 67], [130, 68], [150, 70]],
-        // Second stroke: left vertical
-        [[90, 50], [88, 70], [86, 90], [84, 110], [82, 130], [80, 150], [78, 170], [76, 190], [78, 210]],
-        // Third stroke: diagonal crossing
-        [[120, 90], [125, 100], [130, 110], [135, 120], [140, 130], [145, 140], [150, 150], [155, 160], [160, 170]],
-        // Fourth stroke: bottom right stroke
-        [[110, 140], [120, 145], [130, 150], [140, 155], [150, 160], [160, 165], [170, 170], [180, 175], [190, 180]]
-      ]
-    },
-    { 
-      char: 'く', romaji: 'ku', sound: '/ku/', mnemonic: 'A bird\'s beak saying "Coo"', strokes: 1, group: 'k-sounds',
-      strokePaths: [
-        // Single stroke: curved line like a beak
-        [[200, 80], [190, 90], [180, 105], [170, 120], [160, 135], [150, 150], [140, 165], [130, 180], [125, 195], [122, 210], [125, 225], [135, 235], [150, 240]]
-      ]
-    },
-    { 
-      char: 'け', romaji: 'ke', sound: '/ke/', mnemonic: 'A Keg on its side', strokes: 3, group: 'k-sounds',
-      strokePaths: [
-        // First stroke: top horizontal
-        [[70, 80], [90, 78], [110, 76], [130, 75], [150, 76], [170, 78], [190, 80]],
-        // Second stroke: left vertical with curve
-        [[100, 60], [98, 80], [96, 100], [94, 120], [92, 140], [90, 160], [88, 180], [86, 200], [88, 220], [92, 235]],
-        // Third stroke: right diagonal with hook
-        [[160, 110], [165, 120], [170, 130], [175, 140], [180, 150], [185, 160], [190, 170], [192, 180], [190, 190], [185, 198], [175, 203], [160, 205]]
-      ]
-    },
-    { 
-      char: 'こ', romaji: 'ko', sound: '/ko/', mnemonic: 'Two horizontal lines like a Comb', strokes: 2, group: 'k-sounds',
-      strokePaths: [
-        // First stroke: top horizontal
-        [[80, 100], [100, 98], [120, 96], [140, 95], [160, 96], [180, 98], [200, 100]],
-        // Second stroke: bottom horizontal
-        [[80, 160], [100, 158], [120, 156], [140, 155], [160, 156], [180, 158], [200, 160], [220, 162]]
-      ]
-    },
+    { char: 'か', romaji: 'ka', sound: '/ka/', mnemonic: 'A Karate chop breaking a stick', strokes: 3, group: 'k-sounds' },
+    { char: 'き', romaji: 'ki', sound: '/ki/', mnemonic: 'A Key with teeth pointing up', strokes: 4, group: 'k-sounds' },
+    { char: 'く', romaji: 'ku', sound: '/ku/', mnemonic: 'A bird\'s beak saying "Coo"', strokes: 1, group: 'k-sounds' },
+    { char: 'け', romaji: 'ke', sound: '/ke/', mnemonic: 'A Keg on its side', strokes: 3, group: 'k-sounds' },
+    { char: 'こ', romaji: 'ko', sound: '/ko/', mnemonic: 'Two horizontal lines like a Comb', strokes: 2, group: 'k-sounds' },
+    
     // S-sounds (さしすせそ)
     { char: 'さ', romaji: 'sa', sound: '/sa/', mnemonic: 'A Samurai\'s sword cutting down', strokes: 3, group: 's-sounds' },
     { char: 'し', romaji: 'shi', sound: '/ʃi/', mnemonic: 'A fishing hook catching a fish', strokes: 1, group: 's-sounds' },
     { char: 'す', romaji: 'su', sound: '/su/', mnemonic: 'A Swing hanging from a tree', strokes: 2, group: 's-sounds' },
     { char: 'せ', romaji: 'se', sound: '/se/', mnemonic: 'A Say-so gesture pointing', strokes: 3, group: 's-sounds' },
     { char: 'そ', romaji: 'so', sound: '/so/', mnemonic: 'A Sewing needle and thread', strokes: 1, group: 's-sounds' },
+    
     // T-sounds (たちつてと)
     { char: 'た', romaji: 'ta', sound: '/ta/', mnemonic: 'A Taekwondo kick', strokes: 4, group: 't-sounds' },
     { char: 'ち', romaji: 'chi', sound: '/tʃi/', mnemonic: 'A Cheerleader with pom-poms', strokes: 3, group: 't-sounds' },
     { char: 'つ', romaji: 'tsu', sound: '/tsu/', mnemonic: 'A Tsunami wave', strokes: 1, group: 't-sounds' },
     { char: 'て', romaji: 'te', sound: '/te/', mnemonic: 'A Telephone pole', strokes: 3, group: 't-sounds' },
     { char: 'と', romaji: 'to', sound: '/to/', mnemonic: 'A Toe with a nail', strokes: 2, group: 't-sounds' },
+    
     // N-sounds (なにぬねの)
     { char: 'な', romaji: 'na', sound: '/na/', mnemonic: 'A knife cutting', strokes: 4, group: 'n-sounds' },
     { char: 'に', romaji: 'ni', sound: '/ni/', mnemonic: 'A knee bent', strokes: 3, group: 'n-sounds' },
     { char: 'ぬ', romaji: 'nu', sound: '/nu/', mnemonic: 'Noodles on chopsticks', strokes: 2, group: 'n-sounds' },
     { char: 'ね', romaji: 'ne', sound: '/ne/', mnemonic: 'A cat with a long neck', strokes: 2, group: 'n-sounds' },
     { char: 'の', romaji: 'no', sound: '/no/', mnemonic: 'A lasso knot', strokes: 1, group: 'n-sounds' },
+    
     // H-sounds (はひふへほ)
     { char: 'は', romaji: 'ha', sound: '/ha/', mnemonic: 'A happy face laughing', strokes: 3, group: 'h-sounds' },
     { char: 'ひ', romaji: 'hi', sound: '/hi/', mnemonic: 'A heel and leg', strokes: 1, group: 'h-sounds' },
     { char: 'ふ', romaji: 'fu', sound: '/ɸu/', mnemonic: 'Mount Fuji', strokes: 4, group: 'h-sounds' },
     { char: 'へ', romaji: 'he', sound: '/he/', mnemonic: 'A helmet', strokes: 1, group: 'h-sounds' },
     { char: 'ほ', romaji: 'ho', sound: '/ho/', mnemonic: 'A house with a chimney', strokes: 4, group: 'h-sounds' },
+    
     // M-sounds (まみむめも)
     { char: 'ま', romaji: 'ma', sound: '/ma/', mnemonic: 'A mama with flowing hair', strokes: 3, group: 'm-sounds' },
     { char: 'み', romaji: 'mi', sound: '/mi/', mnemonic: 'A river meandering', strokes: 2, group: 'm-sounds' },
     { char: 'む', romaji: 'mu', sound: '/mu/', mnemonic: 'A cow saying moo', strokes: 3, group: 'm-sounds' },
     { char: 'め', romaji: 'me', sound: '/me/', mnemonic: 'An eye and eyebrow', strokes: 2, group: 'm-sounds' },
     { char: 'も', romaji: 'mo', sound: '/mo/', mnemonic: 'More fish on a hook', strokes: 3, group: 'm-sounds' },
+    
     // Y-sounds (やゆよ)
     { char: 'や', romaji: 'ya', sound: '/ja/', mnemonic: 'A yacht with sails', strokes: 3, group: 'y-sounds' },
     { char: 'ゆ', romaji: 'yu', sound: '/ju/', mnemonic: 'A U-turn arrow', strokes: 2, group: 'y-sounds' },
     { char: 'よ', romaji: 'yo', sound: '/jo/', mnemonic: 'A yoga pose', strokes: 2, group: 'y-sounds' },
+    
     // R-sounds (らりるれろ)
     { char: 'ら', romaji: 'ra', sound: '/ɾa/', mnemonic: 'A rabbit running', strokes: 2, group: 'r-sounds' },
     { char: 'り', romaji: 'ri', sound: '/ɾi/', mnemonic: 'A reed in water', strokes: 2, group: 'r-sounds' },
     { char: 'る', romaji: 'ru', sound: '/ɾu/', mnemonic: 'A loop and curve', strokes: 1, group: 'r-sounds' },
     { char: 'れ', romaji: 're', sound: '/ɾe/', mnemonic: 'A racquet', strokes: 1, group: 'r-sounds' },
     { char: 'ろ', romaji: 'ro', sound: '/ɾo/', mnemonic: 'A road winding', strokes: 3, group: 'r-sounds' },
+    
     // W-sounds and N (わをん)
     { char: 'わ', romaji: 'wa', sound: '/wa/', mnemonic: 'A waterfall', strokes: 3, group: 'w-sounds' },
     { char: 'を', romaji: 'wo', sound: '/wo/', mnemonic: 'Wolverine claws', strokes: 3, group: 'w-sounds' },
     { char: 'ん', romaji: 'n', sound: '/n/', mnemonic: 'A nun bowing', strokes: 1, group: 'n-final' },
+    
+    // Voiced Sounds (Dakuten – ゛)
+    // G-sounds (がぎぐげご)
+    { char: 'が', romaji: 'ga', sound: '/ga/', mnemonic: 'Garden with a gate', strokes: 3, group: 'g-sounds' },
+    { char: 'ぎ', romaji: 'gi', sound: '/gi/', mnemonic: 'Gift with a bow', strokes: 4, group: 'g-sounds' },
+    { char: 'ぐ', romaji: 'gu', sound: '/gu/', mnemonic: 'Good luck charm', strokes: 1, group: 'g-sounds' },
+    { char: 'げ', romaji: 'ge', sound: '/ge/', mnemonic: 'Gentle breeze', strokes: 3, group: 'g-sounds' },
+    { char: 'ご', romaji: 'go', sound: '/go/', mnemonic: 'Go sign pointing forward', strokes: 2, group: 'g-sounds' },
+    
+    // Z-sounds (ざじずぜぞ)
+    { char: 'ざ', romaji: 'za', sound: '/za/', mnemonic: 'Zebra stripes', strokes: 3, group: 'z-sounds' },
+    { char: 'じ', romaji: 'ji', sound: '/dʒi/', mnemonic: 'Jewel shining bright', strokes: 1, group: 'z-sounds' },
+    { char: 'ず', romaji: 'zu', sound: '/zu/', mnemonic: 'Zoo with animals', strokes: 2, group: 'z-sounds' },
+    { char: 'ぜ', romaji: 'ze', sound: '/ze/', mnemonic: 'Zen meditation', strokes: 3, group: 'z-sounds' },
+    { char: 'ぞ', romaji: 'zo', sound: '/zo/', mnemonic: 'Zombie walking', strokes: 1, group: 'z-sounds' },
+    
+    // D-sounds (だぢづでど)
+    { char: 'だ', romaji: 'da', sound: '/da/', mnemonic: 'Dance moves', strokes: 4, group: 'd-sounds' },
+    { char: 'ぢ', romaji: 'ji', sound: '/dʒi/', mnemonic: 'Rare sound, like じ', strokes: 3, group: 'd-sounds' },
+    { char: 'づ', romaji: 'zu', sound: '/zu/', mnemonic: 'Rare sound, like ず', strokes: 1, group: 'd-sounds' },
+    { char: 'で', romaji: 'de', sound: '/de/', mnemonic: 'Desk with papers', strokes: 3, group: 'd-sounds' },
+    { char: 'ど', romaji: 'do', sound: '/do/', mnemonic: 'Door opening', strokes: 2, group: 'd-sounds' },
+    
+    // B-sounds (ばびぶべぼ)
+    { char: 'ば', romaji: 'ba', sound: '/ba/', mnemonic: 'Baby crying', strokes: 3, group: 'b-sounds' },
+    { char: 'び', romaji: 'bi', sound: '/bi/', mnemonic: 'Bee buzzing', strokes: 1, group: 'b-sounds' },
+    { char: 'ぶ', romaji: 'bu', sound: '/bu/', mnemonic: 'Bubble floating', strokes: 4, group: 'b-sounds' },
+    { char: 'べ', romaji: 'be', sound: '/be/', mnemonic: 'Bell ringing', strokes: 1, group: 'b-sounds' },
+    { char: 'ぼ', romaji: 'bo', sound: '/bo/', mnemonic: 'Boat sailing', strokes: 4, group: 'b-sounds' },
+    
+    // P-sounds (Handakuten – ゜)
+    { char: 'ぱ', romaji: 'pa', sound: '/pa/', mnemonic: 'Party balloon', strokes: 3, group: 'p-sounds' },
+    { char: 'ぴ', romaji: 'pi', sound: '/pi/', mnemonic: 'Pizza slice', strokes: 1, group: 'p-sounds' },
+    { char: 'ぷ', romaji: 'pu', sound: '/pu/', mnemonic: 'Puppy playing', strokes: 4, group: 'p-sounds' },
+    { char: 'ぺ', romaji: 'pe', sound: '/pe/', mnemonic: 'Pen writing', strokes: 1, group: 'p-sounds' },
+    { char: 'ぽ', romaji: 'po', sound: '/po/', mnemonic: 'Pole vaulting', strokes: 4, group: 'p-sounds' },
+    
+    // Combined Sounds (Youon – Small や, ゆ, よ)
+    // K + Y combinations
+    { char: 'きゃ', romaji: 'kya', sound: '/kja/', mnemonic: 'Key + ya = kya', strokes: 4, group: 'ky-sounds' },
+    { char: 'きゅ', romaji: 'kyu', sound: '/kju/', mnemonic: 'Key + yu = kyu', strokes: 4, group: 'ky-sounds' },
+    { char: 'きょ', romaji: 'kyo', sound: '/kjo/', mnemonic: 'Key + yo = kyo', strokes: 4, group: 'ky-sounds' },
+    
+    // G + Y combinations
+    { char: 'ぎゃ', romaji: 'gya', sound: '/gja/', mnemonic: 'Gift + ya = gya', strokes: 4, group: 'gy-sounds' },
+    { char: 'ぎゅ', romaji: 'gyu', sound: '/gju/', mnemonic: 'Gift + yu = gyu', strokes: 4, group: 'gy-sounds' },
+    { char: 'ぎょ', romaji: 'gyo', sound: '/gjo/', mnemonic: 'Gift + yo = gyo', strokes: 4, group: 'gy-sounds' },
+    
+    // S + Y combinations
+    { char: 'しゃ', romaji: 'sha', sound: '/ʃa/', mnemonic: 'Ship + ya = sha', strokes: 1, group: 'sy-sounds' },
+    { char: 'しゅ', romaji: 'shu', sound: '/ʃu/', mnemonic: 'Ship + yu = shu', strokes: 1, group: 'sy-sounds' },
+    { char: 'しょ', romaji: 'sho', sound: '/ʃo/', mnemonic: 'Ship + yo = sho', strokes: 1, group: 'sy-sounds' },
+    
+    // J + Y combinations
+    { char: 'じゃ', romaji: 'ja', sound: '/dʒa/', mnemonic: 'Jewel + ya = ja', strokes: 1, group: 'jy-sounds' },
+    { char: 'じゅ', romaji: 'ju', sound: '/dʒu/', mnemonic: 'Jewel + yu = ju', strokes: 1, group: 'jy-sounds' },
+    { char: 'じょ', romaji: 'jo', sound: '/dʒo/', mnemonic: 'Jewel + yo = jo', strokes: 1, group: 'jy-sounds' },
+    
+    // T + Y combinations
+    { char: 'ちゃ', romaji: 'cha', sound: '/tʃa/', mnemonic: 'Cheer + ya = cha', strokes: 3, group: 'ty-sounds' },
+    { char: 'ちゅ', romaji: 'chu', sound: '/tʃu/', mnemonic: 'Cheer + yu = chu', strokes: 3, group: 'ty-sounds' },
+    { char: 'ちょ', romaji: 'cho', sound: '/tʃo/', mnemonic: 'Cheer + yo = cho', strokes: 3, group: 'ty-sounds' },
+    
+    // N + Y combinations
+    { char: 'にゃ', romaji: 'nya', sound: '/nja/', mnemonic: 'Knee + ya = nya', strokes: 3, group: 'ny-sounds' },
+    { char: 'にゅ', romaji: 'nyu', sound: '/nju/', mnemonic: 'Knee + yu = nyu', strokes: 3, group: 'ny-sounds' },
+    { char: 'にょ', romaji: 'nyo', sound: '/njo/', mnemonic: 'Knee + yo = nyo', strokes: 3, group: 'ny-sounds' },
+    
+    // H + Y combinations
+    { char: 'ひゃ', romaji: 'hya', sound: '/hja/', mnemonic: 'Heel + ya = hya', strokes: 1, group: 'hy-sounds' },
+    { char: 'ひゅ', romaji: 'hyu', sound: '/hju/', mnemonic: 'Heel + yu = hyu', strokes: 1, group: 'hy-sounds' },
+    { char: 'ひょ', romaji: 'hyo', sound: '/hjo/', mnemonic: 'Heel + yo = hyo', strokes: 1, group: 'hy-sounds' },
+    
+    // B + Y combinations
+    { char: 'びゃ', romaji: 'bya', sound: '/bja/', mnemonic: 'Bee + ya = bya', strokes: 1, group: 'by-sounds' },
+    { char: 'びゅ', romaji: 'byu', sound: '/bju/', mnemonic: 'Bee + yu = byu', strokes: 1, group: 'by-sounds' },
+    { char: 'びょ', romaji: 'byo', sound: '/bjo/', mnemonic: 'Bee + yo = byo', strokes: 1, group: 'by-sounds' },
+    
+    // P + Y combinations
+    { char: 'ぴゃ', romaji: 'pya', sound: '/pja/', mnemonic: 'Pizza + ya = pya', strokes: 1, group: 'py-sounds' },
+    { char: 'ぴゅ', romaji: 'pyu', sound: '/pju/', mnemonic: 'Pizza + yu = pyu', strokes: 1, group: 'py-sounds' },
+    { char: 'ぴょ', romaji: 'pyo', sound: '/pjo/', mnemonic: 'Pizza + yo = pyo', strokes: 1, group: 'py-sounds' },
+    
+    // M + Y combinations
+    { char: 'みゃ', romaji: 'mya', sound: '/mja/', mnemonic: 'Mama + ya = mya', strokes: 3, group: 'my-sounds' },
+    { char: 'みゅ', romaji: 'myu', sound: '/mju/', mnemonic: 'Mama + yu = myu', strokes: 3, group: 'my-sounds' },
+    { char: 'みょ', romaji: 'myo', sound: '/mjo/', mnemonic: 'Mama + yo = myo', strokes: 3, group: 'my-sounds' },
+    
+    // R + Y combinations
+    { char: 'りゃ', romaji: 'rya', sound: '/ɾja/', mnemonic: 'Rabbit + ya = rya', strokes: 2, group: 'ry-sounds' },
+    { char: 'りゅ', romaji: 'ryu', sound: '/ɾju/', mnemonic: 'Rabbit + yu = ryu', strokes: 2, group: 'ry-sounds' },
+    { char: 'りょ', romaji: 'ryo', sound: '/ɾjo/', mnemonic: 'Rabbit + yo = ryo', strokes: 2, group: 'ry-sounds' },
   ];
 
   // Complete Katakana characters
-  const katakanaCharacters = [
+  const katakanaCharacters: Array<{
+    char: string;
+    romaji: string;
+    sound: string;
+    mnemonic: string;
+    strokes: number;
+    group: string;
+    strokePaths?: number[][][];
+  }> = [
+    // Basic Katakana (Gojuon Table – ア～ン)
     // Vowels (アイウエオ)
-    { 
-      char: 'ア', romaji: 'a', sound: '/a/', mnemonic: 'An Axe chopping wood', strokes: 2, group: 'vowels',
-      strokePaths: [
-        // First stroke: left diagonal line (like axe handle)
-        [[95, 45], [92, 65], [89, 85], [86, 105], [83, 125], [80, 145], [77, 165], [74, 185], [71, 205]],
-        // Second stroke: horizontal crossing line
-        [[75, 115], [95, 113], [115, 111], [135, 110], [155, 111], [175, 113], [195, 115]]
-      ]
-    },
-    { 
-      char: 'イ', romaji: 'i', sound: '/i/', mnemonic: 'An Eagle\'s beak pointing right', strokes: 2, group: 'vowels',
-      strokePaths: [
-        // First stroke: left vertical line
-        [[75, 50], [73, 70], [71, 90], [69, 110], [67, 130], [65, 150], [63, 170], [61, 190], [59, 210]],
-        // Second stroke: right diagonal line slanting down
-        [[155, 60], [150, 80], [145, 100], [140, 120], [135, 140], [130, 160], [125, 180], [120, 200], [115, 220]]
-      ]
-    },
-    { 
-      char: 'ウ', romaji: 'u', sound: '/u/', mnemonic: 'A Warrior\'s helmet', strokes: 3, group: 'vowels',
-      strokePaths: [
-        // First stroke: top horizontal line
-        [[65, 65], [85, 63], [105, 62], [125, 63], [145, 65]],
-        // Second stroke: left diagonal down and curve
-        [[75, 100], [80, 115], [85, 130], [90, 145], [95, 160], [100, 170]],
-        // Third stroke: right diagonal down
-        [[135, 100], [130, 115], [125, 130], [120, 145], [115, 160], [110, 170]]
-      ]
-    },
-    { 
-      char: 'エ', romaji: 'e', sound: '/e/', mnemonic: 'An Elevator shaft', strokes: 3, group: 'vowels',
-      strokePaths: [
-        // First stroke: top horizontal
-        [[70, 70], [90, 68], [110, 67], [130, 68], [150, 70]],
-        // Second stroke: middle horizontal
-        [[70, 110], [90, 108], [110, 107], [130, 108], [150, 110]],
-        // Third stroke: bottom horizontal (longest)
-        [[70, 150], [90, 148], [110, 147], [130, 148], [150, 150], [170, 152], [190, 154]]
-      ]
-    },
-    { 
-      char: 'オ', romaji: 'o', sound: '/o/', mnemonic: 'An Opera singer\'s mouth', strokes: 3, group: 'vowels',
-      strokePaths: [
-        // First stroke: top horizontal
-        [[70, 70], [90, 68], [110, 67], [130, 68], [150, 70]],
-        // Second stroke: left vertical line
-        [[90, 50], [88, 80], [86, 110], [84, 140], [82, 170], [80, 200]],
-        // Third stroke: right vertical with slight curve
-        [[140, 90], [138, 120], [136, 150], [134, 180], [132, 210]]
-      ]
-    },
+    { char: 'ア', romaji: 'a', sound: '/a/', mnemonic: 'An Axe chopping wood', strokes: 2, group: 'vowels' },
+    { char: 'イ', romaji: 'i', sound: '/i/', mnemonic: 'An Eagle\'s beak pointing right', strokes: 2, group: 'vowels' },
+    { char: 'ウ', romaji: 'u', sound: '/u/', mnemonic: 'A Warrior\'s helmet', strokes: 3, group: 'vowels' },
+    { char: 'エ', romaji: 'e', sound: '/e/', mnemonic: 'An Elevator shaft', strokes: 3, group: 'vowels' },
+    { char: 'オ', romaji: 'o', sound: '/o/', mnemonic: 'An Opera singer\'s mouth', strokes: 3, group: 'vowels' },
+    
     // K-sounds (カキクケコ)
     { char: 'カ', romaji: 'ka', sound: '/ka/', mnemonic: 'A Cutter blade', strokes: 2, group: 'k-sounds' },
     { char: 'キ', romaji: 'ki', sound: '/ki/', mnemonic: 'A Key\'s teeth', strokes: 3, group: 'k-sounds' },
     { char: 'ク', romaji: 'ku', sound: '/ku/', mnemonic: 'A bird\'s Claw', strokes: 2, group: 'k-sounds' },
     { char: 'ケ', romaji: 'ke', sound: '/ke/', mnemonic: 'A Keg tipped over', strokes: 3, group: 'k-sounds' },
     { char: 'コ', romaji: 'ko', sound: '/ko/', mnemonic: 'A Corner of a building', strokes: 2, group: 'k-sounds' },
+    
     // S-sounds (サシスセソ)
     { char: 'サ', romaji: 'sa', sound: '/sa/', mnemonic: 'A Samurai sword', strokes: 3, group: 's-sounds' },
     { char: 'シ', romaji: 'shi', sound: '/ʃi/', mnemonic: 'She has long hair', strokes: 3, group: 's-sounds' },
     { char: 'ス', romaji: 'su', sound: '/su/', mnemonic: 'A swing set', strokes: 2, group: 's-sounds' },
     { char: 'セ', romaji: 'se', sound: '/se/', mnemonic: 'A say sign', strokes: 2, group: 's-sounds' },
     { char: 'ソ', romaji: 'so', sound: '/so/', mnemonic: 'A sewing needle', strokes: 2, group: 's-sounds' },
+    
     // T-sounds (タチツテト)
     { char: 'タ', romaji: 'ta', sound: '/ta/', mnemonic: 'A table with legs', strokes: 3, group: 't-sounds' },
     { char: 'チ', romaji: 'chi', sound: '/tʃi/', mnemonic: 'A cheerful wave', strokes: 3, group: 't-sounds' },
     { char: 'ツ', romaji: 'tsu', sound: '/tsu/', mnemonic: 'A tsunami wave', strokes: 2, group: 't-sounds' },
     { char: 'テ', romaji: 'te', sound: '/te/', mnemonic: 'A television antenna', strokes: 3, group: 't-sounds' },
     { char: 'ト', romaji: 'to', sound: '/to/', mnemonic: 'A toe nail', strokes: 2, group: 't-sounds' },
+    
     // N-sounds (ナニヌネノ)
     { char: 'ナ', romaji: 'na', sound: '/na/', mnemonic: 'A nail being hammered', strokes: 4, group: 'n-sounds' },
     { char: 'ニ', romaji: 'ni', sound: '/ni/', mnemonic: 'Two lines like needles', strokes: 3, group: 'n-sounds' },
     { char: 'ヌ', romaji: 'nu', sound: '/nu/', mnemonic: 'A nude figure with curves', strokes: 2, group: 'n-sounds' },
     { char: 'ネ', romaji: 'ne', sound: '/ne/', mnemonic: 'A cat with a long neck', strokes: 4, group: 'n-sounds' },
     { char: 'ノ', romaji: 'no', sound: '/no/', mnemonic: 'A diagonal line saying no', strokes: 1, group: 'n-sounds' },
+    
     // H-sounds (ハヒフヘホ)
     { char: 'ハ', romaji: 'ha', sound: '/ha/', mnemonic: 'A happy face laughing', strokes: 3, group: 'h-sounds' },
     { char: 'ヒ', romaji: 'hi', sound: '/hi/', mnemonic: 'A heel and leg', strokes: 2, group: 'h-sounds' },
     { char: 'フ', romaji: 'fu', sound: '/ɸu/', mnemonic: 'A hook fishing', strokes: 1, group: 'h-sounds' },
     { char: 'ヘ', romaji: 'he', sound: '/he/', mnemonic: 'A mountain peak', strokes: 1, group: 'h-sounds' },
     { char: 'ホ', romaji: 'ho', sound: '/ho/', mnemonic: 'A house with cross beams', strokes: 4, group: 'h-sounds' },
+    
     // M-sounds (マミムメモ)
     { char: 'マ', romaji: 'ma', sound: '/ma/', mnemonic: 'A mama with flowing hair', strokes: 2, group: 'm-sounds' },
     { char: 'ミ', romaji: 'mi', sound: '/mi/', mnemonic: 'Three lines like musical notes', strokes: 3, group: 'm-sounds' },
     { char: 'ム', romaji: 'mu', sound: '/mu/', mnemonic: 'A cow saying moo', strokes: 2, group: 'm-sounds' },
     { char: 'メ', romaji: 'me', sound: '/me/', mnemonic: 'An eye and eyebrow', strokes: 2, group: 'm-sounds' },
     { char: 'モ', romaji: 'mo', sound: '/mo/', mnemonic: 'More horizontal lines', strokes: 3, group: 'm-sounds' },
+    
     // Y-sounds (ヤユヨ)
     { char: 'ヤ', romaji: 'ya', sound: '/ja/', mnemonic: 'A yacht with sails', strokes: 3, group: 'y-sounds' },
     { char: 'ユ', romaji: 'yu', sound: '/ju/', mnemonic: 'A U-turn with extra line', strokes: 2, group: 'y-sounds' },
     { char: 'ヨ', romaji: 'yo', sound: '/jo/', mnemonic: 'A yoga pose with balance', strokes: 3, group: 'y-sounds' },
+    
     // R-sounds (ラリルレロ)
     { char: 'ラ', romaji: 'ra', sound: '/ɾa/', mnemonic: 'A rabbit running right', strokes: 2, group: 'r-sounds' },
     { char: 'リ', romaji: 'ri', sound: '/ɾi/', mnemonic: 'A reed swaying', strokes: 2, group: 'r-sounds' },
     { char: 'ル', romaji: 'ru', sound: '/ɾu/', mnemonic: 'A loop with tail', strokes: 2, group: 'r-sounds' },
     { char: 'レ', romaji: 're', sound: '/ɾe/', mnemonic: 'A left turn arrow', strokes: 1, group: 'r-sounds' },
     { char: 'ロ', romaji: 'ro', sound: '/ɾo/', mnemonic: 'A square box road', strokes: 3, group: 'r-sounds' },
+    
     // W-sounds and N (ワヲン)
     { char: 'ワ', romaji: 'wa', sound: '/wa/', mnemonic: 'A waterfall flow', strokes: 2, group: 'w-sounds' },
     { char: 'ヲ', romaji: 'wo', sound: '/wo/', mnemonic: 'Wolverine claws extended', strokes: 3, group: 'w-sounds' },
     { char: 'ン', romaji: 'n', sound: '/n/', mnemonic: 'A vertical line with curve', strokes: 1, group: 'n-final' },
+    
+    // Voiced Sounds (Dakuten – ゛)
+    // G-sounds (ガギグゲゴ)
+    { char: 'ガ', romaji: 'ga', sound: '/ga/', mnemonic: 'Garden gate', strokes: 2, group: 'g-sounds' },
+    { char: 'ギ', romaji: 'gi', sound: '/gi/', mnemonic: 'Gift with bow', strokes: 3, group: 'g-sounds' },
+    { char: 'グ', romaji: 'gu', sound: '/gu/', mnemonic: 'Good luck charm', strokes: 2, group: 'g-sounds' },
+    { char: 'ゲ', romaji: 'ge', sound: '/ge/', mnemonic: 'Gentle breeze', strokes: 3, group: 'g-sounds' },
+    { char: 'ゴ', romaji: 'go', sound: '/go/', mnemonic: 'Go sign pointing forward', strokes: 2, group: 'g-sounds' },
+    
+    // Z-sounds (ザジズゼゾ)
+    { char: 'ザ', romaji: 'za', sound: '/za/', mnemonic: 'Zebra stripes', strokes: 3, group: 'z-sounds' },
+    { char: 'ジ', romaji: 'ji', sound: '/dʒi/', mnemonic: 'Jewel shining bright', strokes: 3, group: 'z-sounds' },
+    { char: 'ズ', romaji: 'zu', sound: '/zu/', mnemonic: 'Zoo with animals', strokes: 2, group: 'z-sounds' },
+    { char: 'ゼ', romaji: 'ze', sound: '/ze/', mnemonic: 'Zen meditation', strokes: 2, group: 'z-sounds' },
+    { char: 'ゾ', romaji: 'zo', sound: '/zo/', mnemonic: 'Zombie walking', strokes: 2, group: 'z-sounds' },
+    
+    // D-sounds (ダヂヅデド)
+    { char: 'ダ', romaji: 'da', sound: '/da/', mnemonic: 'Dance moves', strokes: 3, group: 'd-sounds' },
+    { char: 'ヂ', romaji: 'ji', sound: '/dʒi/', mnemonic: 'Rare sound, like ジ', strokes: 3, group: 'd-sounds' },
+    { char: 'ヅ', romaji: 'zu', sound: '/zu/', mnemonic: 'Rare sound, like ズ', strokes: 2, group: 'd-sounds' },
+    { char: 'デ', romaji: 'de', sound: '/de/', mnemonic: 'Desk with papers', strokes: 3, group: 'd-sounds' },
+    { char: 'ド', romaji: 'do', sound: '/do/', mnemonic: 'Door opening', strokes: 2, group: 'd-sounds' },
+    
+    // B-sounds (バビブベボ)
+    { char: 'バ', romaji: 'ba', sound: '/ba/', mnemonic: 'Baby crying', strokes: 3, group: 'b-sounds' },
+    { char: 'ビ', romaji: 'bi', sound: '/bi/', mnemonic: 'Bee buzzing', strokes: 2, group: 'b-sounds' },
+    { char: 'ブ', romaji: 'bu', sound: '/bu/', mnemonic: 'Bubble floating', strokes: 1, group: 'b-sounds' },
+    { char: 'ベ', romaji: 'be', sound: '/be/', mnemonic: 'Bell ringing', strokes: 1, group: 'b-sounds' },
+    { char: 'ボ', romaji: 'bo', sound: '/bo/', mnemonic: 'Boat sailing', strokes: 4, group: 'b-sounds' },
+    
+    // P-sounds (Handakuten – ゜)
+    { char: 'パ', romaji: 'pa', sound: '/pa/', mnemonic: 'Party balloon', strokes: 3, group: 'p-sounds' },
+    { char: 'ピ', romaji: 'pi', sound: '/pi/', mnemonic: 'Pizza slice', strokes: 2, group: 'p-sounds' },
+    { char: 'プ', romaji: 'pu', sound: '/pu/', mnemonic: 'Puppy playing', strokes: 1, group: 'p-sounds' },
+    { char: 'ペ', romaji: 'pe', sound: '/pe/', mnemonic: 'Pen writing', strokes: 1, group: 'p-sounds' },
+    { char: 'ポ', romaji: 'po', sound: '/po/', mnemonic: 'Pole vaulting', strokes: 4, group: 'p-sounds' },
+    
+    // Combined Sounds (Youon – Small ヤ, ユ, ヨ)
+    // K + Y combinations
+    { char: 'キャ', romaji: 'kya', sound: '/kja/', mnemonic: 'Key + ya = kya', strokes: 3, group: 'ky-sounds' },
+    { char: 'キュ', romaji: 'kyu', sound: '/kju/', mnemonic: 'Key + yu = kyu', strokes: 3, group: 'ky-sounds' },
+    { char: 'キョ', romaji: 'kyo', sound: '/kjo/', mnemonic: 'Key + yo = kyo', strokes: 3, group: 'ky-sounds' },
+    
+    // G + Y combinations
+    { char: 'ギャ', romaji: 'gya', sound: '/gja/', mnemonic: 'Gift + ya = gya', strokes: 3, group: 'gy-sounds' },
+    { char: 'ギュ', romaji: 'gyu', sound: '/gju/', mnemonic: 'Gift + yu = gyu', strokes: 3, group: 'gy-sounds' },
+    { char: 'ギョ', romaji: 'gyo', sound: '/gjo/', mnemonic: 'Gift + yo = gyo', strokes: 3, group: 'gy-sounds' },
+    
+    // S + Y combinations
+    { char: 'シャ', romaji: 'sha', sound: '/ʃa/', mnemonic: 'Ship + ya = sha', strokes: 3, group: 'sy-sounds' },
+    { char: 'シュ', romaji: 'shu', sound: '/ʃu/', mnemonic: 'Ship + yu = shu', strokes: 3, group: 'sy-sounds' },
+    { char: 'ショ', romaji: 'sho', sound: '/ʃo/', mnemonic: 'Ship + yo = sho', strokes: 3, group: 'sy-sounds' },
+    
+    // J + Y combinations
+    { char: 'ジャ', romaji: 'ja', sound: '/dʒa/', mnemonic: 'Jewel + ya = ja', strokes: 3, group: 'jy-sounds' },
+    { char: 'ジュ', romaji: 'ju', sound: '/dʒu/', mnemonic: 'Jewel + yu = ju', strokes: 3, group: 'jy-sounds' },
+    { char: 'ジョ', romaji: 'jo', sound: '/dʒo/', mnemonic: 'Jewel + yo = jo', strokes: 3, group: 'jy-sounds' },
+    
+    // T + Y combinations
+    { char: 'チャ', romaji: 'cha', sound: '/tʃa/', mnemonic: 'Cheer + ya = cha', strokes: 3, group: 'ty-sounds' },
+    { char: 'チュ', romaji: 'chu', sound: '/tʃu/', mnemonic: 'Cheer + yu = chu', strokes: 3, group: 'ty-sounds' },
+    { char: 'チョ', romaji: 'cho', sound: '/tʃo/', mnemonic: 'Cheer + yo = cho', strokes: 3, group: 'ty-sounds' },
+    
+    // N + Y combinations
+    { char: 'ニャ', romaji: 'nya', sound: '/nja/', mnemonic: 'Knee + ya = nya', strokes: 4, group: 'ny-sounds' },
+    { char: 'ニュ', romaji: 'nyu', sound: '/nju/', mnemonic: 'Knee + yu = nyu', strokes: 4, group: 'ny-sounds' },
+    { char: 'ニョ', romaji: 'nyo', sound: '/njo/', mnemonic: 'Knee + yo = nyo', strokes: 4, group: 'ny-sounds' },
+    
+    // H + Y combinations
+    { char: 'ヒャ', romaji: 'hya', sound: '/hja/', mnemonic: 'Heel + ya = hya', strokes: 2, group: 'hy-sounds' },
+    { char: 'ヒュ', romaji: 'hyu', sound: '/hju/', mnemonic: 'Heel + yu = hyu', strokes: 2, group: 'hy-sounds' },
+    { char: 'ヒョ', romaji: 'hyo', sound: '/hjo/', mnemonic: 'Heel + yo = hyo', strokes: 2, group: 'hy-sounds' },
+    
+    // B + Y combinations
+    { char: 'ビャ', romaji: 'bya', sound: '/bja/', mnemonic: 'Bee + ya = bya', strokes: 2, group: 'by-sounds' },
+    { char: 'ビュ', romaji: 'byu', sound: '/bju/', mnemonic: 'Bee + yu = byu', strokes: 2, group: 'by-sounds' },
+    { char: 'ビョ', romaji: 'byo', sound: '/bjo/', mnemonic: 'Bee + yo = byo', strokes: 2, group: 'by-sounds' },
+    
+    // P + Y combinations
+    { char: 'ピャ', romaji: 'pya', sound: '/pja/', mnemonic: 'Pizza + ya = pya', strokes: 2, group: 'py-sounds' },
+    { char: 'ピュ', romaji: 'pyu', sound: '/pju/', mnemonic: 'Pizza + yu = pyu', strokes: 2, group: 'py-sounds' },
+    { char: 'ピョ', romaji: 'pyo', sound: '/pjo/', mnemonic: 'Pizza + yo = pyo', strokes: 2, group: 'py-sounds' },
+    
+    // M + Y combinations
+    { char: 'ミャ', romaji: 'mya', sound: '/mja/', mnemonic: 'Mama + ya = mya', strokes: 2, group: 'my-sounds' },
+    { char: 'ミュ', romaji: 'myu', sound: '/mju/', mnemonic: 'Mama + yu = myu', strokes: 2, group: 'my-sounds' },
+    { char: 'ミョ', romaji: 'myo', sound: '/mjo/', mnemonic: 'Mama + yo = myo', strokes: 2, group: 'my-sounds' },
+    
+    // R + Y combinations
+    { char: 'リャ', romaji: 'rya', sound: '/ɾja/', mnemonic: 'Rabbit + ya = rya', strokes: 2, group: 'ry-sounds' },
+    { char: 'リュ', romaji: 'ryu', sound: '/ɾju/', mnemonic: 'Rabbit + yu = ryu', strokes: 2, group: 'ry-sounds' },
+    { char: 'リョ', romaji: 'ryo', sound: '/ɾjo/', mnemonic: 'Rabbit + yo = ryo', strokes: 2, group: 'ry-sounds' },
   ];
 
   const getCurrentCharacters = () => {
@@ -351,7 +452,23 @@ const HiraganaKatakana: React.FC = () => {
     { name: 'M-sounds (ま行/マ行)', count: 5, color: 'bg-indigo-100 text-indigo-800' },
     { name: 'Y-sounds (や行/ヤ行)', count: 3, color: 'bg-gray-100 text-gray-800' },
     { name: 'R-sounds (ら行/ラ行)', count: 5, color: 'bg-orange-100 text-orange-800' },
-    { name: 'W-sounds & N (わをん/ワヲン)', count: 3, color: 'bg-teal-100 text-teal-800' }
+    { name: 'W-sounds & N (わをん/ワヲン)', count: 3, color: 'bg-teal-100 text-teal-800' },
+    { name: 'G-sounds (が行/ガ行)', count: 5, color: 'bg-emerald-100 text-emerald-800' },
+    { name: 'Z-sounds (ざ行/ザ行)', count: 5, color: 'bg-cyan-100 text-cyan-800' },
+    { name: 'D-sounds (だ行/ダ行)', count: 5, color: 'bg-amber-100 text-amber-800' },
+    { name: 'B-sounds (ば行/バ行)', count: 5, color: 'bg-rose-100 text-rose-800' },
+    { name: 'P-sounds (ぱ行/パ行)', count: 5, color: 'bg-violet-100 text-violet-800' },
+    { name: 'KY-sounds (きゃ行/キャ行)', count: 3, color: 'bg-sky-100 text-sky-800' },
+    { name: 'GY-sounds (ぎゃ行/ギャ行)', count: 3, color: 'bg-lime-100 text-lime-800' },
+    { name: 'SY-sounds (しゃ行/シャ行)', count: 3, color: 'bg-fuchsia-100 text-fuchsia-800' },
+    { name: 'JY-sounds (じゃ行/ジャ行)', count: 3, color: 'bg-stone-100 text-stone-800' },
+    { name: 'TY-sounds (ちゃ行/チャ行)', count: 3, color: 'bg-slate-100 text-slate-800' },
+    { name: 'NY-sounds (にゃ行/ニャ行)', count: 3, color: 'bg-zinc-100 text-zinc-800' },
+    { name: 'HY-sounds (ひゃ行/ヒャ行)', count: 3, color: 'bg-neutral-100 text-neutral-800' },
+    { name: 'BY-sounds (びゃ行/ビャ行)', count: 3, color: 'bg-red-50 text-red-700' },
+    { name: 'PY-sounds (ぴゃ行/ピャ行)', count: 3, color: 'bg-blue-50 text-blue-700' },
+    { name: 'MY-sounds (みゃ行/ミャ行)', count: 3, color: 'bg-green-50 text-green-700' },
+    { name: 'RY-sounds (りゃ行/リャ行)', count: 3, color: 'bg-yellow-50 text-yellow-700' }
   ];
 
   const nextCharacter = () => {
@@ -686,1367 +803,1397 @@ const HiraganaKatakana: React.FC = () => {
     setLastPosition(null);
   };
 
+  // Enhanced Stroke Order Practice Functions
+  const startStrokeDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (strokeOrderMode !== 'practice') return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    setIsDrawing(true);
+    setDrawingPath([[x, y]]);
+  };
+
+  const continueStrokeDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || strokeOrderMode !== 'practice') return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    setDrawingPath(prev => [...prev, [x, y]]);
+    
+    // Draw the stroke in real-time
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.strokeStyle = '#3B82F6';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      const lastPoint = drawingPath[drawingPath.length - 1];
+      if (lastPoint) {
+        ctx.beginPath();
+        ctx.moveTo(lastPoint[0], lastPoint[1]);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+    }
+  };
+
+  const endStrokeDrawing = () => {
+    if (!isDrawing || strokeOrderMode !== 'practice') return;
+    
+    setIsDrawing(false);
+    
+    if (drawingPath.length > 5) { // Minimum stroke length
+      setUserStrokes(prev => [...prev, drawingPath]);
+      
+      // Check if stroke order is correct
+      if (currentCharacter.strokePaths && currentStrokeIndex < currentCharacter.strokePaths.length) {
+        const accuracy = calculateStrokeAccuracy(drawingPath, currentCharacter.strokePaths[currentStrokeIndex]);
+        if (accuracy > 0.7) { // 70% accuracy threshold
+          setCurrentStrokeIndex(prev => prev + 1);
+          setStrokeOrderScore(prev => prev + 10);
+          setFeedback('Great stroke! Move to the next one.');
+          setFeedbackType('positive');
+        } else {
+          setFeedback('Try again. Focus on the stroke direction and shape.');
+          setFeedbackType('negative');
+        }
+      }
+    }
+    
+    setDrawingPath([]);
+  };
+
+  const calculateStrokeAccuracy = (userStroke: Array<[number, number]>, targetStroke: number[][]) => {
+    // Simple accuracy calculation based on stroke direction and length
+    if (userStroke.length < 2 || targetStroke.length < 2) return 0;
+    
+    const userDirection = Math.atan2(
+      userStroke[userStroke.length - 1][1] - userStroke[0][1],
+      userStroke[userStroke.length - 1][0] - userStroke[0][0]
+    );
+    
+    const targetDirection = Math.atan2(
+      targetStroke[targetStroke.length - 1][1] - targetStroke[0][1],
+      targetStroke[targetStroke.length - 1][0] - targetStroke[0][0]
+    );
+    
+    const directionDiff = Math.abs(userDirection - targetDirection);
+    const directionAccuracy = Math.max(0, 1 - directionDiff / Math.PI);
+    
+    const userLength = Math.sqrt(
+      Math.pow(userStroke[userStroke.length - 1][0] - userStroke[0][0], 2) +
+      Math.pow(userStroke[userStroke.length - 1][1] - userStroke[0][1], 2)
+    );
+    
+    const targetLength = Math.sqrt(
+      Math.pow(targetStroke[targetStroke.length - 1][0] - targetStroke[0][0], 2) +
+      Math.pow(targetStroke[targetStroke.length - 1][1] - targetStroke[0][1], 2)
+    );
+    
+    const lengthAccuracy = Math.min(userLength, targetLength) / Math.max(userLength, targetLength);
+    
+    return (directionAccuracy + lengthAccuracy) / 2;
+  };
+
+  const resetStrokeOrderPractice = () => {
+    setCurrentStrokeIndex(0);
+    setUserStrokes([]);
+    setStrokeOrderScore(0);
+    setFeedback('Start practicing the stroke order. Follow the numbered guide.');
+    setFeedbackType('neutral');
+    clearCanvas();
+  };
+
+  const completeStrokeOrderPractice = () => {
+    if (currentCharacter.strokePaths && currentStrokeIndex >= currentCharacter.strokePaths.length) {
+      setFeedback('Excellent! You\'ve completed all strokes correctly!');
+      setFeedbackType('positive');
+      setStrokeOrderScore(prev => prev + 50); // Bonus for completion
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      {/* Memory Card Game Modal */}
-      {showMemoryGame && (
-        <MemoryCardGame onClose={() => setShowMemoryGame(false)} />
-      )}
-
-      {/* Speed Recognition Game Modal */}
-      {showSpeedGame && (
-        <SpeedRecognitionGame onClose={() => setShowSpeedGame(false)} />
-      )}
-
-      {/* Stroke Puzzle Game Modal */}
-      {showStrokePuzzle && (
-        <StrokePuzzle onClose={() => setShowStrokePuzzle(false)} />
-      )}
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative max-w-7xl mx-auto px-4 py-12">
-          <div className="flex items-center justify-between mb-8">
-            <Link 
-              to="/language/jlpt-n5" 
-              className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to JLPT N5 Course</span>
-            </Link>
-            <div className="flex items-center space-x-2">
-              <Home className="w-5 h-5" />
-              <span className="text-sm">Step 1 of 6</span>
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <Pen className="w-8 h-8 text-yellow-300" />
-              <span className="bg-yellow-300 text-purple-900 px-3 py-1 rounded-full text-sm font-bold">
-                AI-Powered Writing System
-              </span>
-            </div>
-            <h1 className="text-5xl font-bold mb-6">
-              Master <span className="text-yellow-300">Hiragana & Katakana</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Animated Background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute top-40 left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+      </div>
+      {/* Modals */}
+      {showMemoryGame && <MemoryCardGame onClose={() => setShowMemoryGame(false)} />}
+      {showSpeedGame && <SpeedRecognitionGame onClose={() => setShowSpeedGame(false)} />}
+      {showStrokePuzzle && <StrokePuzzle onClose={() => setShowStrokePuzzle(false)} />}
+      {/* Hero Section, Navigation Tabs, and Tab Content */}
+      <div className="relative z-10">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Hero Content */}
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-bold text-white mb-4">
+              Hiragana & Katakana Mastery
             </h1>
-            <p className="text-xl mb-8 max-w-3xl mx-auto">
-              Learn all 92 characters with the world's most advanced AI writing system. 
-              Perfect stroke order, pronunciation, and memory techniques.
+            <p className="text-xl text-gray-300 mb-8">
+              Master the Japanese syllabaries with interactive learning tools
             </p>
-            
-            {/* Progress Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                <h3 className="text-2xl font-bold mb-2">ひらがな Hiragana</h3>
-                <div className="flex items-center justify-between mb-2">
-                  <span>Progress</span>
-                  <span>{userProgress.hiragana.learned}/46</span>
-                </div>
-                <div className="w-full bg-white/20 rounded-full h-3">
-                  <div 
-                    className="bg-yellow-400 h-3 rounded-full transition-all duration-500"
-                    style={{ width: `${(userProgress.hiragana.learned / 46) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                <h3 className="text-2xl font-bold mb-2">カタカナ Katakana</h3>
-                <div className="flex items-center justify-between mb-2">
-                  <span>Progress</span>
-                  <span>{userProgress.katakana.learned}/46</span>
-                </div>
-                <div className="w-full bg-white/20 rounded-full h-3">
-                  <div 
-                    className="bg-green-400 h-3 rounded-full transition-all duration-500"
-                    style={{ width: `${(userProgress.katakana.learned / 46) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="sticky top-16 z-40 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4">
-          <nav className="flex space-x-8">
-            {[
-              { id: 'overview', label: 'Learning Overview', icon: <BookOpen className="w-4 h-4" /> },
-              { id: 'practice', label: 'Character Practice', icon: <Pen className="w-4 h-4" /> },
-              { id: 'memory', label: 'Memory Training', icon: <Brain className="w-4 h-4" /> },
-              { id: 'exam', label: 'Mastery Exam', icon: <Award className="w-4 h-4" /> }
-            ].map((tab) => (
+            <div className="flex justify-center space-x-4">
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 py-4 border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-600 hover:text-purple-600'
-                }`}
-              >
-                {tab.icon}
-                <span className="font-medium">{tab.label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {activeTab === 'overview' && (
-          <div className="space-y-12">
-            {/* AI Features */}
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">World's Most Advanced Character Learning System</h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Our AI analyzes your writing patterns, adapts to your learning style, and creates personalized memory techniques
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {aiFeatures.map((feature, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">{feature.icon}</div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                      <p className="text-gray-600">{feature.description}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Complete Character Tables */}
-            <div className="space-y-8">
-              {/* Hiragana Table */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                  <h3 className="text-3xl font-bold text-gray-900">🟩 Hiragana (ひらがな)</h3>
-                </div>
-                
-                {/* Basic Gojūon */}
-                <div className="mb-8">
-                  <h4 className="text-xl font-bold text-blue-600 mb-4">🔹 Basic (Gojūon)</h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="p-3 text-left font-bold text-gray-600">Sound</th>
-                          <th className="p-3 text-center font-bold text-blue-600">A</th>
-                          <th className="p-3 text-center font-bold text-blue-600">I</th>
-                          <th className="p-3 text-center font-bold text-blue-600">U</th>
-                          <th className="p-3 text-center font-bold text-blue-600">E</th>
-                          <th className="p-3 text-center font-bold text-blue-600">O</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">-</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded" 
-                              onClick={() => handleCharacterClick('あ', 'hiragana')}
-                          >あ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('い', 'hiragana')}
-                          >い</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('う', 'hiragana')}
-                          >う</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('え', 'hiragana')}
-                          >え</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('お', 'hiragana')}
-                          >お</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">K</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('か', 'hiragana')}
-                          >か</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('き', 'hiragana')}
-                          >き</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('く', 'hiragana')}
-                          >く</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('け', 'hiragana')}
-                          >け</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('こ', 'hiragana')}
-                          >こ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">S</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('さ', 'hiragana')}
-                          >さ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('し', 'hiragana')}
-                          >し</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('す', 'hiragana')}
-                          >す</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('せ', 'hiragana')}
-                          >せ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('そ', 'hiragana')}
-                          >そ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">T</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('た', 'hiragana')}
-                          >た</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ち', 'hiragana')}
-                          >ち</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('つ', 'hiragana')}
-                          >つ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('て', 'hiragana')}
-                          >て</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('と', 'hiragana')}
-                          >と</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">N</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('な', 'hiragana')}
-                          >な</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('に', 'hiragana')}
-                          >に</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ぬ', 'hiragana')}
-                          >ぬ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ね', 'hiragana')}
-                          >ね</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('の', 'hiragana')}
-                          >の</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">H</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('は', 'hiragana')}
-                          >は</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ひ', 'hiragana')}
-                          >ひ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ふ', 'hiragana')}
-                          >ふ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('へ', 'hiragana')}
-                          >へ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ほ', 'hiragana')}
-                          >ほ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">M</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ま', 'hiragana')}
-                          >ま</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('み', 'hiragana')}
-                          >み</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('む', 'hiragana')}
-                          >む</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('め', 'hiragana')}
-                          >め</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('も', 'hiragana')}
-                          >も</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">Y</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('や', 'hiragana')}
-                          >や</td>
-                          <td className="p-3 text-center text-gray-400">-</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ゆ', 'hiragana')}
-                          >ゆ</td>
-                          <td className="p-3 text-center text-gray-400">-</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('よ', 'hiragana')}
-                          >よ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">R</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ら', 'hiragana')}
-                          >ら</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('り', 'hiragana')}
-                          >り</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('る', 'hiragana')}
-                          >る</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('れ', 'hiragana')}
-                          >れ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ろ', 'hiragana')}
-                          >ろ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">W</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('わ', 'hiragana')}
-                          >わ</td>
-                          <td className="p-3 text-center text-gray-400">-</td>
-                          <td className="p-3 text-center text-gray-400">-</td>
-                          <td className="p-3 text-center text-gray-400">-</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('を', 'hiragana')}
-                          >を</td>
-                        </tr>
-                        <tr className="hover:bg-gray-50">
-                          <td className="p-3 font-semibold">N</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ん', 'hiragana')}
-                          >ん</td>
-                          <td className="p-3 text-center text-gray-400"></td>
-                          <td className="p-3 text-center text-gray-400"></td>
-                          <td className="p-3 text-center text-gray-400"></td>
-                          <td className="p-3 text-center text-gray-400"></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Dakuten and Handakuten */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <h4 className="text-lg font-bold text-blue-600 mb-3">🔹 With Dakuten (゛)</h4>
-                    <div className="grid grid-cols-4 gap-2 text-center">
-                      <div className="font-semibold text-gray-600">G</div>
-                      <div className="font-semibold text-gray-600">Z</div>
-                      <div className="font-semibold text-gray-600">D</div>
-                      <div className="font-semibold text-gray-600">B</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">が</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ざ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">だ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ば</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぎ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">じ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぢ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">び</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぐ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ず</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">づ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぶ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">げ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぜ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">で</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">べ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ご</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぞ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ど</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぼ</div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-lg font-bold text-blue-600 mb-3">🔹 With Handakuten (゜)</h4>
-                    <div className="text-center">
-                      <div className="font-semibold text-gray-600 mb-2">P</div>
-                      <div className="grid grid-cols-5 gap-2">
-                        <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぱ</div>
-                        <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぴ</div>
-                        <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぷ</div>
-                        <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぺ</div>
-                        <div className="text-xl font-bold cursor-pointer hover:bg-blue-100 rounded p-2">ぽ</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Yōon (Combinations) */}
-                <div>
-                  <h4 className="text-lg font-bold text-blue-600 mb-3">🔹 Yōon (Combinations)</h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="p-2 text-left font-bold text-gray-600">Sound</th>
-                          <th className="p-2 text-center font-bold text-blue-600">K</th>
-                          <th className="p-2 text-center font-bold text-blue-600">G</th>
-                          <th className="p-2 text-center font-bold text-blue-600">S</th>
-                          <th className="p-2 text-center font-bold text-blue-600">Z</th>
-                          <th className="p-2 text-center font-bold text-blue-600">T</th>
-                          <th className="p-2 text-center font-bold text-blue-600">D</th>
-                          <th className="p-2 text-center font-bold text-blue-600">N</th>
-                          <th className="p-2 text-center font-bold text-blue-600">H</th>
-                          <th className="p-2 text-center font-bold text-blue-600">B</th>
-                          <th className="p-2 text-center font-bold text-blue-600">P</th>
-                          <th className="p-2 text-center font-bold text-blue-600">M</th>
-                          <th className="p-2 text-center font-bold text-blue-600">R</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-2 font-semibold">YA</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('きゃ', 'hiragana')}
-                          >きゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ぎゃ', 'hiragana')}
-                          >ぎゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('しゃ', 'hiragana')}
-                          >しゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('じゃ', 'hiragana')}
-                          >じゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ちゃ', 'hiragana')}
-                          >ちゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ぢゃ', 'hiragana')}
-                          >ぢゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('にゃ', 'hiragana')}
-                          >にゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ひゃ', 'hiragana')}
-                          >ひゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('びゃ', 'hiragana')}
-                          >びゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ぴゃ', 'hiragana')}
-                          >ぴゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('みゃ', 'hiragana')}
-                          >みゃ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('りゃ', 'hiragana')}
-                          >りゃ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-2 font-semibold">YU</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('きゅ', 'hiragana')}
-                          >きゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ぎゅ', 'hiragana')}
-                          >ぎゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('しゅ', 'hiragana')}
-                          >しゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('じゅ', 'hiragana')}
-                          >じゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ちゅ', 'hiragana')}
-                          >ちゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ぢゅ', 'hiragana')}
-                          >ぢゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('にゅ', 'hiragana')}
-                          >にゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ひゅ', 'hiragana')}
-                          >ひゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('びゅ', 'hiragana')}
-                          >びゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ぴゅ', 'hiragana')}
-                          >ぴゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('みゅ', 'hiragana')}
-                          >みゅ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('りゅ', 'hiragana')}
-                          >りゅ</td>
-                        </tr>
-                        <tr className="hover:bg-gray-50">
-                          <td className="p-2 font-semibold">YO</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('きょ', 'hiragana')}
-                          >きょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ぎょ', 'hiragana')}
-                          >ぎょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('しょ', 'hiragana')}
-                          >しょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('じょ', 'hiragana')}
-                          >じょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ちょ', 'hiragana')}
-                          >ちょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ぢょ', 'hiragana')}
-                          >ぢょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('にょ', 'hiragana')}
-                          >にょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ひょ', 'hiragana')}
-                          >ひょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('びょ', 'hiragana')}
-                          >びょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('ぴょ', 'hiragana')}
-                          >ぴょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('みょ', 'hiragana')}
-                          >みょ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-blue-100 rounded"
-                              onClick={() => handleCharacterClick('りょ', 'hiragana')}
-                          >りょ</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              {/* Katakana Table */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
-                  <h3 className="text-3xl font-bold text-gray-900">🟧 Katakana (カタカナ)</h3>
-                </div>
-                
-                {/* Basic Gojūon */}
-                <div className="mb-8">
-                  <h4 className="text-xl font-bold text-orange-600 mb-4">🔹 Basic (Gojūon)</h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="p-3 text-left font-bold text-gray-600">Sound</th>
-                          <th className="p-3 text-center font-bold text-orange-600">A</th>
-                          <th className="p-3 text-center font-bold text-orange-600">I</th>
-                          <th className="p-3 text-center font-bold text-orange-600">U</th>
-                          <th className="p-3 text-center font-bold text-orange-600">E</th>
-                          <th className="p-3 text-center font-bold text-orange-600">O</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">-</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded" 
-                              onClick={() => handleCharacterClick('ア', 'katakana')}
-                          >ア</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('イ', 'katakana')}
-                          >イ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ウ', 'katakana')}
-                          >ウ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('エ', 'katakana')}
-                          >エ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('オ', 'katakana')}
-                          >オ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">K</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('カ', 'katakana')}
-                          >カ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('キ', 'katakana')}
-                          >キ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ク', 'katakana')}
-                          >ク</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ケ', 'katakana')}
-                          >ケ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('コ', 'katakana')}
-                          >コ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">S</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('サ', 'katakana')}
-                          >サ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('シ', 'katakana')}
-                          >シ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ス', 'katakana')}
-                          >ス</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('セ', 'katakana')}
-                          >セ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ソ', 'katakana')}
-                          >ソ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">T</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('タ', 'katakana')}
-                          >タ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('チ', 'katakana')}
-                          >チ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ツ', 'katakana')}
-                          >ツ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('テ', 'katakana')}
-                          >テ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ト', 'katakana')}
-                          >ト</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">N</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ナ', 'katakana')}
-                          >ナ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ニ', 'katakana')}
-                          >ニ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヌ', 'katakana')}
-                          >ヌ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ネ', 'katakana')}
-                          >ネ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ノ', 'katakana')}
-                          >ノ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">H</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ハ', 'katakana')}
-                          >ハ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヒ', 'katakana')}
-                          >ヒ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('フ', 'katakana')}
-                          >フ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヘ', 'katakana')}
-                          >ヘ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ホ', 'katakana')}
-                          >ホ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">M</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('マ', 'katakana')}
-                          >マ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ミ', 'katakana')}
-                          >ミ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ム', 'katakana')}
-                          >ム</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('メ', 'katakana')}
-                          >メ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('モ', 'katakana')}
-                          >モ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">Y</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヤ', 'katakana')}
-                          >ヤ</td>
-                          <td className="p-3 text-center text-gray-400">-</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ユ', 'katakana')}
-                          >ユ</td>
-                          <td className="p-3 text-center text-gray-400">-</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヨ', 'katakana')}
-                          >ヨ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">R</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ラ', 'katakana')}
-                          >ラ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('リ', 'katakana')}
-                          >リ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ル', 'katakana')}
-                          >ル</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('レ', 'katakana')}
-                          >レ</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ロ', 'katakana')}
-                          >ロ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-semibold">W</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ワ', 'katakana')}
-                          >ワ</td>
-                          <td className="p-3 text-center text-gray-400">-</td>
-                          <td className="p-3 text-center text-gray-400">-</td>
-                          <td className="p-3 text-center text-gray-400">-</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヲ', 'katakana')}
-                          >ヲ</td>
-                        </tr>
-                        <tr className="hover:bg-gray-50">
-                          <td className="p-3 font-semibold">N</td>
-                          <td className="p-3 text-center text-2xl font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ン', 'katakana')}
-                          >ン</td>
-                          <td className="p-3 text-center text-gray-400"></td>
-                          <td className="p-3 text-center text-gray-400"></td>
-                          <td className="p-3 text-center text-gray-400"></td>
-                          <td className="p-3 text-center text-gray-400"></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Dakuten and Handakuten for Katakana */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="text-lg font-bold text-orange-600 mb-3">🔹 With Dakuten (゛)</h4>
-                    <div className="grid grid-cols-4 gap-2 text-center">
-                      <div className="font-semibold text-gray-600">G</div>
-                      <div className="font-semibold text-gray-600">Z</div>
-                      <div className="font-semibold text-gray-600">D</div>
-                      <div className="font-semibold text-gray-600">B</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ガ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ザ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ダ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">バ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ギ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ジ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ヂ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ビ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">グ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ズ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ヅ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ブ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ゲ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ゼ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">デ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ベ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ゴ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ゾ</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ド</div>
-                      <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ボ</div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-lg font-bold text-orange-600 mb-3">🔹 With Handakuten (゜)</h4>
-                    <div className="text-center">
-                      <div className="font-semibold text-gray-600 mb-2">P</div>
-                      <div className="grid grid-cols-5 gap-2">
-                        <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">パ</div>
-                        <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ピ</div>
-                        <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">プ</div>
-                        <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ペ</div>
-                        <div className="text-xl font-bold cursor-pointer hover:bg-orange-100 rounded p-2">ポ</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Yōon (Combinations) */}
-                <div>
-                  <h4 className="text-lg font-bold text-orange-600 mb-3">🔹 Yōon (Combinations)</h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="p-2 text-left font-bold text-gray-600">Sound</th>
-                          <th className="p-2 text-center font-bold text-orange-600">K</th>
-                          <th className="p-2 text-center font-bold text-orange-600">G</th>
-                          <th className="p-2 text-center font-bold text-orange-600">S</th>
-                          <th className="p-2 text-center font-bold text-orange-600">Z</th>
-                          <th className="p-2 text-center font-bold text-orange-600">T</th>
-                          <th className="p-2 text-center font-bold text-orange-600">D</th>
-                          <th className="p-2 text-center font-bold text-orange-600">N</th>
-                          <th className="p-2 text-center font-bold text-orange-600">H</th>
-                          <th className="p-2 text-center font-bold text-orange-600">B</th>
-                          <th className="p-2 text-center font-bold text-orange-600">P</th>
-                          <th className="p-2 text-center font-bold text-orange-600">M</th>
-                          <th className="p-2 text-center font-bold text-orange-600">R</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-2 font-semibold">YA</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('キャ', 'katakana')}
-                          >キャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ギャ', 'katakana')}
-                          >ギャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('シャ', 'katakana')}
-                          >シャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ジャ', 'katakana')}
-                          >ジャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('チャ', 'katakana')}
-                          >チャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヂャ', 'katakana')}
-                          >ヂャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ニャ', 'katakana')}
-                          >ニャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヒャ', 'katakana')}
-                          >ヒャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ビャ', 'katakana')}
-                          >ビャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ピャ', 'katakana')}
-                          >ピャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ミャ', 'katakana')}
-                          >ミャ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('リャ', 'katakana')}
-                          >リャ</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-2 font-semibold">YU</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('キュ', 'katakana')}
-                          >キュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ギュ', 'katakana')}
-                          >ギュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('シュ', 'katakana')}
-                          >シュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ジュ', 'katakana')}
-                          >ジュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('チュ', 'katakana')}
-                          >チュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヂュ', 'katakana')}
-                          >ヂュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ニュ', 'katakana')}
-                          >ニュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヒュ', 'katakana')}
-                          >ヒュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ビュ', 'katakana')}
-                          >ビュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ピュ', 'katakana')}
-                          >ピュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ミュ', 'katakana')}
-                          >ミュ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('リュ', 'katakana')}
-                          >リュ</td>
-                        </tr>
-                        <tr className="hover:bg-gray-50">
-                          <td className="p-2 font-semibold">YO</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('キョ', 'katakana')}
-                          >キョ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ギョ', 'katakana')}
-                          >ギョ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ショ', 'katakana')}
-                          >ショ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ジョ', 'katakana')}
-                          >ジョ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('チョ', 'katakana')}
-                          >チョ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヂョ', 'katakana')}
-                          >ヂョ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ニョ', 'katakana')}
-                          >ニョ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ヒョ', 'katakana')}
-                          >ヒョ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ビョ', 'katakana')}
-                          >ビョ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ピョ', 'katakana')}
-                          >ピョ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('ミョ', 'katakana')}
-                          >ミョ</td>
-                          <td className="p-2 text-center text-lg font-bold cursor-pointer hover:bg-orange-100 rounded"
-                              onClick={() => handleCharacterClick('リョ', 'katakana')}
-                          >リョ</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Character Groups Overview */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h3 className="text-3xl font-bold text-gray-900 mb-8 text-center">Learning Structure</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {characterGroups.map((group, index) => (
-                  <div key={index} className={`${group.color} p-4 rounded-lg`}>
-                    <div className="font-bold text-lg">{group.name}</div>
-                    <div className="text-sm opacity-75">{group.count} characters</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Start Learning Section */}
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl p-8 text-center">
-              <h3 className="text-3xl font-bold mb-4">Ready to Start?</h3>
-              <p className="text-xl mb-8 text-purple-100">
-                Begin with the first character and master the foundation of Japanese writing
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-                <button 
-                  onClick={() => setActiveTab('practice')}
-                  className="bg-yellow-400 text-purple-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-yellow-300 transition-all duration-300 flex items-center space-x-2 group"
-                >
-                  <Pen className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                  <span>Start Learning Characters</span>
-                </button>
-                <button className="bg-white/20 backdrop-blur-sm border border-white/30 px-8 py-4 rounded-xl font-semibold hover:bg-white/30 transition-all duration-300">
-                  Take Placement Test
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'practice' && (
-          <div className="space-y-8">
-            {/* Script Selector */}
-            <div className="flex items-center justify-center space-x-4">
-              <button
-                onClick={() => {
-                  setCurrentScript('hiragana');
-                  setCurrentCharacterIndex(0);
-                  setFeedbackType('neutral');
-                  setFeedback('Practice drawing this character. Use the animation as a guide for proper stroke order.');
-                  clearCanvas();
-                }}
-                className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+                onClick={() => setCurrentScript('hiragana')}
+                className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                   currentScript === 'hiragana'
                     ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
                 }`}
               >
-                ひらがな Hiragana
+                Hiragana (ひらがな)
               </button>
               <button
-                onClick={() => {
-                  setCurrentScript('katakana');
-                  setCurrentCharacterIndex(0);
-                  setFeedbackType('neutral');
-                  setFeedback('Practice drawing this character. Use the animation as a guide for proper stroke order.');
-                  clearCanvas();
-                }}
-                className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+                onClick={() => setCurrentScript('katakana')}
+                className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                   currentScript === 'katakana'
-                    ? 'bg-green-600 text-white shadow-lg'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
                 }`}
               >
-                カタカナ Katakana
+                Katakana (カタカナ)
               </button>
             </div>
+          </div>
 
-            {/* Character Learning Interface */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Character Display */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <div className="text-center mb-8">
-                  <div className="text-8xl font-bold text-gray-900 mb-4">
-                    {currentCharacter.char}
-                  </div>
-                  <div className="text-2xl text-gray-600 mb-2">
-                    {currentCharacter.romaji}
-                  </div>
-                  <div className="text-lg text-purple-600 font-semibold">
-                    {currentCharacter.sound}
+          {/* Navigation Tabs */}
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-2 mb-8">
+            <div className="flex space-x-2">
+              {[
+                { id: 'overview', label: 'Overview', icon: BookOpen },
+                { id: 'practice', label: 'Practice', icon: Pen },
+                { id: 'stroke-order', label: 'Stroke Order', icon: PlayCircle },
+                { id: 'memory', label: 'Memory Games', icon: Brain },
+                { id: 'exam', label: 'Exam', icon: Award }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-white text-gray-900 shadow-lg'
+                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <tab.icon size={20} />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-8">
+            {activeTab === 'overview' && (
+              <div className="space-y-8">
+                {/* Learning Path */}
+                <div className="bg-white/5 rounded-xl p-6">
+                  <h2 className="text-2xl font-bold text-white mb-4">6-Step Learning Path</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { step: 1, title: 'Learn Characters', desc: 'Study each character with mnemonics', icon: BookOpen },
+                      { step: 2, title: 'Practice Writing', desc: 'Master stroke order and writing', icon: Pen },
+                      { step: 3, title: 'Memory Games', desc: 'Reinforce through interactive games', icon: Brain },
+                      { step: 4, title: 'Speed Recognition', desc: 'Build quick character recognition', icon: Clock },
+                      { step: 5, title: 'Stroke Puzzles', desc: 'Advanced stroke order challenges', icon: Award },
+                      { step: 6, title: 'Final Exam', desc: 'Test your complete mastery', icon: Award }
+                    ].map((item) => (
+                      <div key={item.step} className="bg-white/10 rounded-lg p-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                            {item.step}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white">{item.title}</h3>
+                            <p className="text-sm text-gray-300">{item.desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Audio Controls */}
-                <div className="flex items-center justify-center space-x-4 mb-6">
-                  <button
-                    onClick={playPronunciation}
-                    className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors"
-                  >
-                    <Volume2 className="w-6 h-6" />
-                  </button>
-                  <span className="text-gray-600">Listen to pronunciation</span>
-                </div>
+                {/* Character Tables */}
+                <div className="bg-white/5 rounded-xl p-6">
+                  <h2 className="text-2xl font-bold text-white mb-4">
+                    {currentScript === 'hiragana' ? 'Hiragana' : 'Katakana'} Character Table
+                  </h2>
+                  
+                  {currentScript === 'hiragana' ? (
+                    <div className="space-y-8">
+                      {/* Basic Hiragana (Gojuon Table) */}
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">📘 Basic Hiragana (Gojuon Table – あ～ん)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {/* Vowels */}
+                          <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">Vowels (あいうえお)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['あ', 'い', 'う', 'え', 'お'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
 
-                {/* Video Demonstration */}
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <PlayCircle className="w-5 h-5 text-purple-600" />
-                    <span className="font-semibold text-purple-800">Video Guide</span>
-                  </div>
-                  <div className="relative bg-white rounded-lg p-3 border-2 border-purple-200">
-                    <video 
-                      className="w-full h-32 rounded-lg object-cover bg-gray-100"
-                      controls
-                      poster={`/api/video-poster/${currentCharacter.char}`}
-                      key={currentCharacter.char} // Force reload when character changes
-                    >
-                      <source src={`/api/character-videos/${currentCharacter.char}.mp4`} type="video/mp4" />
-                      <source src={`/api/character-videos/${currentCharacter.char}.webm`} type="video/webm" />
-                      {/* Fallback to demo video */}
-                      <source src="/videos/character-demo.mp4" type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                    <div className="mt-2 text-center">
-                      <p className="text-sm text-purple-600">
-                        Watch stroke-by-stroke demonstration for <span className="font-bold text-lg">{currentCharacter.char}</span>
-                      </p>
+                          {/* K-sounds */}
+                          <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">K-sounds (かきくけこ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['か', 'き', 'く', 'け', 'こ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* S-sounds */}
+                          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">S-sounds (さしすせそ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['さ', 'し', 'す', 'せ', 'そ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* T-sounds */}
+                          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">T-sounds (たちつてと)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['た', 'ち', 'つ', 'て', 'と'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* N-sounds */}
+                          <div className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">N-sounds (なにぬねの)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['な', 'に', 'ぬ', 'ね', 'の'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* H-sounds */}
+                          <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">H-sounds (はひふへほ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['は', 'ひ', 'ふ', 'へ', 'ほ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* M-sounds */}
+                          <div className="bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">M-sounds (まみむめも)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ま', 'み', 'む', 'め', 'も'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Y-sounds */}
+                          <div className="bg-gradient-to-br from-rose-500 to-red-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">Y-sounds (やゆよ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['や', 'ゆ', 'よ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* R-sounds */}
+                          <div className="bg-gradient-to-br from-red-500 to-orange-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">R-sounds (らりるれろ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ら', 'り', 'る', 'れ', 'ろ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* W-sounds */}
+                          <div className="bg-gradient-to-br from-orange-500 to-yellow-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">W-sounds (わをん)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['わ', 'を', 'ん'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Voiced Sounds (Dakuten) */}
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">📘 Voiced Sounds (Dakuten – ゛)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {/* G-sounds */}
+                          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">G-sounds (がぎぐげご)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['が', 'ぎ', 'ぐ', 'げ', 'ご'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Z-sounds */}
+                          <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">Z-sounds (ざじずぜぞ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ざ', 'じ', 'ず', 'ぜ', 'ぞ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* D-sounds */}
+                          <div className="bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">D-sounds (だぢづでど)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['だ', 'ぢ', 'づ', 'で', 'ど'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* B-sounds */}
+                          <div className="bg-gradient-to-br from-rose-500 to-red-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">B-sounds (ばびぶべぼ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ば', 'び', 'ぶ', 'べ', 'ぼ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* P-sounds (Handakuten) */}
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">📘 P-sounds (Handakuten – ゜)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {/* P-sounds */}
+                          <div className="bg-gradient-to-br from-red-500 to-orange-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">P-sounds (ぱぴぷぺぽ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Combined Sounds (Youon) */}
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">📘 Combined Sounds (Youon – Small や, ゆ, よ)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {/* K + Y combinations */}
+                          <div className="bg-gradient-to-br from-orange-500 to-yellow-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">K + Y (きゃきゅきょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['きゃ', 'きゅ', 'きょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* G + Y combinations */}
+                          <div className="bg-gradient-to-br from-yellow-500 to-lime-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">G + Y (ぎゃぎゅぎょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ぎゃ', 'ぎゅ', 'ぎょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* S + Y combinations */}
+                          <div className="bg-gradient-to-br from-lime-500 to-green-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">S + Y (しゃしゅしょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['しゃ', 'しゅ', 'しょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* J + Y combinations */}
+                          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">J + Y (じゃじゅじょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['じゃ', 'じゅ', 'じょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* T + Y combinations */}
+                          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">T + Y (ちゃちゅちょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ちゃ', 'ちゅ', 'ちょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* N + Y combinations */}
+                          <div className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">N + Y (にゃにゅにょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['にゃ', 'にゅ', 'にょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* H + Y combinations */}
+                          <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">H + Y (ひゃひゅひょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ひゃ', 'ひゅ', 'ひょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* B + Y combinations */}
+                          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">B + Y (びゃびゅびょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['びゃ', 'びゅ', 'びょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* P + Y combinations */}
+                          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">P + Y (ぴゃぴゅぴょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ぴゃ', 'ぴゅ', 'ぴょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* M + Y combinations */}
+                          <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">M + Y (みゃみゅみょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['みゃ', 'みゅ', 'みょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* R + Y combinations */}
+                          <div className="bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">R + Y (りゃりゅりょ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['りゃ', 'りゅ', 'りょ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'hiragana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-8">
+                      {/* Basic Katakana (Gojuon Table) */}
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">📘 Basic Katakana (Gojuon Table – ア～ン)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {/* Vowels */}
+                          <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">Vowels (アイウエオ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ア', 'イ', 'ウ', 'エ', 'オ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* K-sounds */}
+                          <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">K-sounds (カキクケコ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['カ', 'キ', 'ク', 'ケ', 'コ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* S-sounds */}
+                          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">S-sounds (サシスセソ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['サ', 'シ', 'ス', 'セ', 'ソ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* T-sounds */}
+                          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">T-sounds (タチツテト)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['タ', 'チ', 'ツ', 'テ', 'ト'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* N-sounds */}
+                          <div className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">N-sounds (ナニヌネノ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ナ', 'ニ', 'ヌ', 'ネ', 'ノ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* H-sounds */}
+                          <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">H-sounds (ハヒフヘホ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ハ', 'ヒ', 'フ', 'ヘ', 'ホ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* M-sounds */}
+                          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">M-sounds (マミムメモ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['マ', 'ミ', 'ム', 'メ', 'モ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Y-sounds */}
+                          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">Y-sounds (ヤユヨ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ヤ', 'ユ', 'ヨ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* R-sounds */}
+                          <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">R-sounds (ラリルレロ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ラ', 'リ', 'ル', 'レ', 'ロ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* W-sounds and N */}
+                          <div className="bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">W-sounds & N (ワヲン)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ワ', 'ヲ', 'ン'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Voiced Sounds (Dakuten) */}
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">📘 Voiced Sounds (Dakuten – ゛)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {/* G-sounds */}
+                          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">G-sounds (ガギグゲゴ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ガ', 'ギ', 'グ', 'ゲ', 'ゴ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Z-sounds */}
+                          <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">Z-sounds (ザジズゼゾ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ザ', 'ジ', 'ズ', 'ゼ', 'ゾ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* D-sounds */}
+                          <div className="bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">D-sounds (ダヂヅデド)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['ダ', 'ヂ', 'ヅ', 'デ', 'ド'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* B-sounds */}
+                          <div className="bg-gradient-to-br from-rose-500 to-red-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">B-sounds (バビブベボ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['バ', 'ビ', 'ブ', 'ベ', 'ボ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* P-sounds (Handakuten) */}
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">📘 P-sounds (Handakuten – ゜)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {/* P-sounds */}
+                          <div className="bg-gradient-to-br from-red-500 to-orange-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">P-sounds (パピプペポ)</h4>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['パ', 'ピ', 'プ', 'ペ', 'ポ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Combined Sounds (Youon) */}
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">📘 Combined Sounds (Youon – Small ヤ, ユ, ヨ)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {/* K + Y combinations */}
+                          <div className="bg-gradient-to-br from-orange-500 to-yellow-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">K + Y (キャキュキョ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['キャ', 'キュ', 'キョ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* G + Y combinations */}
+                          <div className="bg-gradient-to-br from-yellow-500 to-lime-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">G + Y (ギャギュギョ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ギャ', 'ギュ', 'ギョ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* S + Y combinations */}
+                          <div className="bg-gradient-to-br from-lime-500 to-green-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">S + Y (シャシュショ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['シャ', 'シュ', 'ショ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* J + Y combinations */}
+                          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">J + Y (ジャジュジョ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ジャ', 'ジュ', 'ジョ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* T + Y combinations */}
+                          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">T + Y (チャチュチョ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['チャ', 'チュ', 'チョ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* N + Y combinations */}
+                          <div className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">N + Y (ニャニュニョ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ニャ', 'ニュ', 'ニョ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* H + Y combinations */}
+                          <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">H + Y (ヒャヒュヒョ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ヒャ', 'ヒュ', 'ヒョ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* B + Y combinations */}
+                          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">B + Y (ビャビュビョ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ビャ', 'ビュ', 'ビョ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* P + Y combinations */}
+                          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">P + Y (ピャピュピョ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ピャ', 'ピュ', 'ピョ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* M + Y combinations */}
+                          <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">M + Y (ミャミュミョ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['ミャ', 'ミュ', 'ミョ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* R + Y combinations */}
+                          <div className="bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl p-4">
+                            <h4 className="text-lg font-bold text-white mb-3">R + Y (リャリュリョ)</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['リャ', 'リュ', 'リョ'].map((char) => (
+                                <div
+                                  key={char}
+                                  className="japanese-character bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-all"
+                                  onClick={() => handleCharacterClick(char, 'katakana')}
+                                >
+                                  {char}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'practice' && (
+              <div className="space-y-8">
+                {/* Character Practice */}
+                <div className="bg-white/5 rounded-xl p-6">
+                  <h2 className="text-2xl font-bold text-white mb-4">Character Practice</h2>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Character Display */}
+                    <div className="bg-white/10 rounded-xl p-6">
+                      <div className="text-center mb-6">
+                        <div className="text-8xl font-bold text-white mb-4 japanese-character">
+                          {currentCharacter?.char || 'あ'}
+                        </div>
+                        <div className="text-xl text-gray-300 mb-2">
+                          Romaji: <span className="text-white font-semibold">{currentCharacter?.romaji || 'a'}</span>
+                        </div>
+                        <div className="text-lg text-gray-300">
+                          Sound: <span className="text-white font-semibold">{currentCharacter?.sound || '/a/'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-center space-x-4 mb-6">
+                        <button
+                          onClick={previousCharacter}
+                          className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <ChevronLeft size={24} />
+                        </button>
+                        <button
+                          onClick={playPronunciation}
+                          className="p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <Volume2 size={24} />
+                        </button>
+                        <button
+                          onClick={nextCharacter}
+                          className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <ChevronRight size={24} />
+                        </button>
+                      </div>
+                      
+                      <div className="text-center">
+                        <p className="text-gray-300 mb-4">
+                          Character {currentCharacterIndex + 1} of {getCurrentCharacters().length}
+                        </p>
+                        <div className="w-full bg-gray-700 rounded-full h-2">
+                          <div
+                            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${((currentCharacterIndex + 1) / getCurrentCharacters().length) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Practice Canvas */}
+                    <div className="bg-white/10 rounded-xl p-6">
+                      <h3 className="text-xl font-bold text-white mb-4">Practice Writing</h3>
+                      <div className="bg-white rounded-lg p-4 mb-4">
+                        <canvas
+                          ref={canvasRef}
+                          width={300}
+                          height={300}
+                          className="border border-gray-300 rounded cursor-crosshair w-full"
+                          onMouseDown={startDrawing}
+                          onMouseMove={draw}
+                          onMouseUp={stopDrawing}
+                          onMouseLeave={stopDrawing}
+                          onTouchStart={handleTouchStart}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                        />
+                      </div>
+                      <div className="flex justify-between">
+                        <button
+                          onClick={clearCanvas}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          onClick={showStrokeOrder}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        >
+                          Show Stroke Order
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Memory Mnemonic */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Lightbulb className="w-5 h-5 text-yellow-600" />
-                    <span className="font-semibold text-yellow-800">Memory Technique</span>
+                {/* Mnemonics */}
+                <div className="bg-white/5 rounded-xl p-6">
+                  <h2 className="text-2xl font-bold text-white mb-4">Memory Tips</h2>
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <div className="flex items-start space-x-4">
+                      <Lightbulb className="text-yellow-400 mt-1" size={24} />
+                      <div>
+                        <h3 className="text-lg font-semibold text-white mb-2">Mnemonic</h3>
+                        <p className="text-gray-300">{currentCharacter?.mnemonic || 'A woman with Arms open wide'}</p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-yellow-700">{currentCharacter.mnemonic}</p>
                 </div>
               </div>
+            )}
 
-              {/* Stroke Order Practice */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900">Stroke Order Practice</h3>
-                  <div className="text-sm text-gray-600">
-                    {currentCharacter.strokes} stroke{currentCharacter.strokes > 1 ? 's' : ''} total
+            {activeTab === 'stroke-order' && (
+              <div className="space-y-8">
+                {/* Stroke Order Practice */}
+                <div className="bg-white/5 rounded-xl p-6">
+                  <h2 className="text-2xl font-bold text-white mb-4">Stroke Order Practice</h2>
+                  
+                  {/* Practice Mode Selection */}
+                  <div className="mb-6">
+                    <div className="flex space-x-4 mb-4">
+                      {[
+                        { id: 'guided', label: 'Guided', desc: 'Follow numbered strokes' },
+                        { id: 'free', label: 'Free Practice', desc: 'Practice without guidance' },
+                        { id: 'challenge', label: 'Challenge', desc: 'Test your accuracy' }
+                      ].map((mode) => (
+                        <button
+                          key={mode.id}
+                          onClick={() => setPracticeMode(mode.id as 'free' | 'guided' | 'challenge')}
+                          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                            practiceMode === mode.id
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                          }`}
+                        >
+                          <div className="text-sm font-bold">{mode.label}</div>
+                          <div className="text-xs opacity-75">{mode.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Character Guide */}
+                    <div className="bg-white/10 rounded-xl p-6">
+                      <h3 className="text-xl font-bold text-white mb-4">Character Guide</h3>
+                      <div className="text-center mb-6">
+                        <div className="text-6xl font-bold text-white mb-4 japanese-character">
+                          {currentCharacter?.char || 'あ'}
+                        </div>
+                        <div className="text-lg text-gray-300">
+                          Strokes: {currentCharacter?.strokes || 3}
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-center space-x-4 mb-6">
+                        <button
+                          onClick={playStrokeAnimation}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          Play Animation
+                        </button>
+                        <button
+                          onClick={resetStrokeOrderPractice}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="text-sm text-gray-300 mb-2">Score: {strokeOrderScore}</div>
+                        <div className="text-sm text-gray-300">
+                          Stroke {currentStrokeIndex + 1} of {currentCharacter?.strokes || 3}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Practice Canvas */}
+                    <div className="bg-white/10 rounded-xl p-6">
+                      <h3 className="text-xl font-bold text-white mb-4">Practice Area</h3>
+                      <div className="bg-white rounded-lg p-4 mb-4">
+                        <canvas
+                          ref={canvasRef}
+                          width={300}
+                          height={300}
+                          className="border border-gray-300 rounded cursor-crosshair w-full"
+                          onMouseDown={startStrokeDrawing}
+                          onMouseMove={continueStrokeDrawing}
+                          onMouseUp={endStrokeDrawing}
+                          onMouseLeave={endStrokeDrawing}
+                        />
+                      </div>
+                      
+                      <div className="bg-white/10 rounded-lg p-4">
+                        <div className={`text-center p-3 rounded-lg ${
+                          feedbackType === 'positive' ? 'bg-green-500/20 text-green-300' :
+                          feedbackType === 'negative' ? 'bg-red-500/20 text-red-300' :
+                          'bg-blue-500/20 text-blue-300'
+                        }`}>
+                          {feedback}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Practice Canvas */}
-                <div className="relative bg-gray-50 rounded-lg p-8 mb-6">
-                  <div className="text-center mb-4">
-                    <p className="text-sm text-gray-600">
-                      Watch the animation and practice drawing the character
+            {activeTab === 'memory' && (
+              <div className="space-y-8">
+                {/* Memory Games */}
+                <div className="bg-white/5 rounded-xl p-6">
+                  <h2 className="text-2xl font-bold text-white mb-4">Memory Games</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="bg-white/10 rounded-xl p-6 text-center">
+                      <Brain className="text-blue-400 mx-auto mb-4" size={48} />
+                      <h3 className="text-xl font-bold text-white mb-2">Memory Card Game</h3>
+                      <p className="text-gray-300 mb-4">Match hiragana and katakana characters</p>
+                      <button
+                        onClick={() => setShowMemoryGame(true)}
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Start Game
+                      </button>
+                    </div>
+                    
+                    <div className="bg-white/10 rounded-xl p-6 text-center">
+                      <Clock className="text-green-400 mx-auto mb-4" size={48} />
+                      <h3 className="text-xl font-bold text-white mb-2">Speed Recognition</h3>
+                      <p className="text-gray-300 mb-4">Quick character recognition challenge</p>
+                      <button
+                        onClick={() => setShowSpeedGame(true)}
+                        className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        Start Game
+                      </button>
+                    </div>
+                    
+                    <div className="bg-white/10 rounded-xl p-6 text-center">
+                      <Award className="text-purple-400 mx-auto mb-4" size={48} />
+                      <h3 className="text-xl font-bold text-white mb-2">Stroke Puzzle</h3>
+                      <p className="text-gray-300 mb-4">Arrange stroke pieces correctly</p>
+                      <button
+                        onClick={() => setShowStrokePuzzle(true)}
+                        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        Start Game
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'exam' && (
+              <div className="space-y-8">
+                {/* Exam Section */}
+                <div className="bg-white/5 rounded-xl p-6">
+                  <h2 className="text-2xl font-bold text-white mb-4">Final Exam</h2>
+                  <div className="bg-white/10 rounded-xl p-6 text-center">
+                    <Award className="text-yellow-400 mx-auto mb-4" size={64} />
+                    <h3 className="text-2xl font-bold text-white mb-4">Test Your Mastery</h3>
+                    <p className="text-gray-300 mb-6">
+                      Take a comprehensive exam to test your knowledge of hiragana and katakana.
                     </p>
-                  </div>
-                  <canvas
-                    ref={canvasRef}
-                    width={300}
-                    height={300}
-                    className="border-2 border-dashed border-gray-300 rounded-lg mx-auto block cursor-crosshair bg-white shadow-inner"
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={stopDrawing}
-                    onTouchMove={handleTouchMove}
-                  />
-
-                  <div className="text-center mt-4">
-                    <div className="text-xs text-gray-500">
-                      🔵 Purple = Animation • ⚫ Gray = Your Drawing
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stroke Controls */}
-                <div className="flex items-center justify-center mb-6">
-                  <div className="flex items-center space-x-2">
-                    <button 
-                      onClick={markCorrect}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors" 
-                      title="Mark as correct"
+                    <button
+                      onClick={() => setShowSpeedGame(true)}
+                      className="px-8 py-4 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-lg font-semibold"
                     >
-                      <Check className="w-5 h-5" />
-                    </button>
-                    <button 
-                      onClick={markIncorrect}
-                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors" 
-                      title="Mark as incorrect - try again"
-                    >
-                      <X className="w-5 h-5" />
+                      Start Exam
                     </button>
                   </div>
                 </div>
-
-                {/* AI Feedback */}
-                <div className={`rounded-lg p-4 ${
-                  feedbackType === 'positive' ? 'bg-green-50 border border-green-200' :
-                  feedbackType === 'negative' ? 'bg-red-50 border border-red-200' :
-                  'bg-blue-50 border border-blue-200'
-                }`}>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Brain className={`w-5 h-5 ${
-                      feedbackType === 'positive' ? 'text-green-600' :
-                      feedbackType === 'negative' ? 'text-red-600' :
-                      'text-blue-600'
-                    }`} />
-                    <span className={`font-semibold ${
-                      feedbackType === 'positive' ? 'text-green-800' :
-                      feedbackType === 'negative' ? 'text-red-800' :
-                      'text-blue-800'
-                    }`}>AI Feedback</span>
-                  </div>
-                  <p className={`text-sm ${
-                    feedbackType === 'positive' ? 'text-green-700' :
-                    feedbackType === 'negative' ? 'text-red-700' :
-                    'text-blue-700'
-                  }`}>
-                    {feedback}
-                  </p>
-                </div>
               </div>
-            </div>
-
-            {/* Navigation */}
-            <div className="flex items-center justify-between">
-              <button
-                onClick={previousCharacter}
-                disabled={currentCharacterIndex === 0}
-                className="flex items-center space-x-2 bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-5 h-5" />
-                <span>Previous Character</span>
-              </button>
-
-              <div className="text-center">
-                <div className="text-lg font-semibold text-gray-700">
-                  Character {currentCharacterIndex + 1} of {getCurrentCharacters().length}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {currentCharacter.group}
-                </div>
-              </div>
-
-              <button
-                onClick={nextCharacter}
-                disabled={currentCharacterIndex === getCurrentCharacters().length - 1}
-                className="flex items-center space-x-2 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span>Next Character</span>
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+            )}
           </div>
-        )}
-
-        {activeTab === 'memory' && (
-          <div className="space-y-12">
-            <div className="text-center">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">AI Memory Training</h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Personalized memory techniques that adapt to your learning style and cultural background
-              </p>
-            </div>
-
-            {/* Memory Games */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                <div className="text-4xl mb-4 text-center">🎴</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Memory Cards</h3>
-                <p className="text-gray-600 mb-4">Flip cards to match characters with their sounds</p>
-                <button 
-                  onClick={() => setShowMemoryGame(true)}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                >
-                  Start Game
-                </button>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                <div className="text-4xl mb-4 text-center">🎯</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Speed Recognition</h3>
-                <p className="text-gray-600 mb-4">Quick-fire character identification challenges</p>
-                <button 
-                  onClick={() => setShowSpeedGame(true)}
-                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
-                >
-                  Start Game
-                </button>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                <div className="text-4xl mb-4 text-center">🧩</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Stroke Puzzle</h3>
-                <p className="text-gray-600 mb-4">Reconstruct characters from stroke components</p>
-                <button 
-                  onClick={() => setShowStrokePuzzle(true)}
-                  className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-                >
-                  Start Game
-                </button>
-              </div>
-            </div>
-
-            {/* Spaced Repetition Schedule */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Your Review Schedule</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="text-red-600 font-bold text-lg">Due Now</div>
-                  <div className="text-2xl font-bold text-red-800">12</div>
-                  <div className="text-sm text-red-600">characters</div>
-                </div>
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <div className="text-yellow-600 font-bold text-lg">Due Today</div>
-                  <div className="text-2xl font-bold text-yellow-800">8</div>
-                  <div className="text-sm text-yellow-600">characters</div>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-green-600 font-bold text-lg">Learned</div>
-                  <div className="text-2xl font-bold text-green-800">35</div>
-                  <div className="text-sm text-green-600">characters</div>
-                </div>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="text-blue-600 font-bold text-lg">Mastered</div>
-                  <div className="text-2xl font-bold text-blue-800">18</div>
-                  <div className="text-sm text-blue-600">characters</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'exam' && (
-          <div className="space-y-12">
-            <div className="text-center">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Mastery Examination</h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Comprehensive test of your Hiragana and Katakana knowledge
-              </p>
-            </div>
-
-            {/* Exam Options */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Practice Exam</h3>
-                <div className="space-y-4 mb-6">
-                  <div className="flex justify-between">
-                    <span>Questions:</span>
-                    <span className="font-semibold">50 (25 Hiragana + 25 Katakana)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Time Limit:</span>
-                    <span className="font-semibold">20 minutes</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Passing Score:</span>
-                    <span className="font-semibold">80%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Question Types:</span>
-                    <span className="font-semibold">Reading & Writing</span>
-                  </div>
-                </div>
-                <button className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors">
-                  Start Practice Exam
-                </button>
-              </div>
-
-              <div className="bg-gradient-to-br from-purple-600 to-pink-600 text-white rounded-xl shadow-lg p-8">
-                <h3 className="text-2xl font-bold mb-4">Official Mastery Test</h3>
-                <div className="space-y-4 mb-6">
-                  <div className="flex justify-between">
-                    <span>Questions:</span>
-                    <span className="font-semibold">92 (All Characters)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Time Limit:</span>
-                    <span className="font-semibold">45 minutes</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Passing Score:</span>
-                    <span className="font-semibold">90%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Certification:</span>
-                    <span className="font-semibold">Kaishi Certificate</span>
-                  </div>
-                </div>
-                <button className="w-full bg-yellow-400 text-purple-900 py-4 rounded-lg font-bold text-lg hover:bg-yellow-300 transition-colors">
-                  Take Official Exam
-                </button>
-              </div>
-            </div>
-
-            {/* Previous Results */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Your Previous Results</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                  <div>
-                    <div className="font-semibold text-green-800">Hiragana Practice Test</div>
-                    <div className="text-sm text-green-600">March 15, 2024</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-green-800">92%</div>
-                    <div className="text-sm text-green-600">Passed</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
-                  <div>
-                    <div className="font-semibold text-yellow-800">Katakana Practice Test</div>
-                    <div className="text-sm text-yellow-600">March 12, 2024</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-yellow-800">76%</div>
-                    <div className="text-sm text-yellow-600">Needs Review</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Bottom Progress Bar */}
